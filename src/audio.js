@@ -88,7 +88,7 @@ const Sfx = {
   // и по кругу, с плавным началом и концом. Чтобы добавить трек, положите файл в assets/audio
   // и впишите его в нужный список.
   playlists: {
-    menu: ['assets/audio/music_1.mp3', 'assets/audio/music_2.mp3'],
+    menu: ['assets/audio/music_1.mp3', 'assets/audio/music_2.mp3', 'assets/audio/menu.mp3'],
     battle: ['assets/audio/battle_1.mp3']
   },
   musicMode: 'menu', musicVol: 0.4,
