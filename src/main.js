@@ -8,7 +8,7 @@ class GameScene extends Phaser.Scene {
     this.tweens.resumeAll(); this.anims.resumeAll(); this.paused = false;
     Sfx.setMusic('battle');
     this.gold = BAL.startGold; this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.lives = START_LIVES; this.wave = 0;
-    this.waveActive = false; this.spawnQueue = []; this.spawnTimer = 0;
+    this.waveActive = false; this.spawnQueue = []; this.spawnTimer = 0; this.leaks = {};
     this.enemies = []; this.towers = []; this.bullets = [];
     this.selected = null; this.over = false; this.panelItems = []; this.panelTweens = []; this.panelTimers = []; this.panelKey = null; this.speed = 1;
     this.best = mapBest(MAP_INDEX);
@@ -23,6 +23,9 @@ class GameScene extends Phaser.Scene {
       this.segs.push({ x1, y1, x2, y2, len, start: total }); total += len;
     }
     this.pathLen = total;
+    // Летуны летят по прямой от входа к порталу.
+    const [fx1, fy1] = PATH[0], [fx2, fy2] = PATH[PATH.length - 1];
+    this.flyLen = Math.hypot(fx2 - fx1, fy2 - fy1);
 
     // Поле и дорога
     const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x2f6b3a).setInteractive();
@@ -119,7 +122,8 @@ class GameScene extends Phaser.Scene {
     return {
       dmg: d.dmg * Math.pow(1.6, t.level - 1),
       range: d.range * (1 + 0.12 * (t.level - 1)),
-      rate: d.rate, splash: d.splash || 0, slow: d.slow || 0
+      rate: d.rate, splash: d.splash || 0, slow: d.slow || 0,
+      poison: (d.poison || 0) * Math.pow(1.6, t.level - 1), ptime: d.ptime || 0
     };
   }
   // Ставит стражу кадр позы: '' обычный, 'b' моргание, 'w' замах, 'a' атака.
@@ -235,6 +239,23 @@ class GameScene extends Phaser.Scene {
     for (const [type, count, gap] of (this.wave <= WAVES.length ? WAVES[this.wave - 1] : endlessWave(this.wave)))
       for (let i = 0; i < count; i++) this.spawnQueue.push({ type, gap });
     this.spawnTimer = 0.5; Sfx.play('wave'); this.refresh();
+    // Новый вид монстра: один раз за всю игру показываем подсказку, чем он опасен.
+    const fresh = [...new Set(this.spawnQueue.map(q => q.type))].filter(k => L('n_' + k) !== 'n_' + k && !Platform.storage.get('seen_' + k, false));
+    fresh.forEach((k, i) => { Platform.storage.set('seen_' + k, true); this.enemyTip(k, i); });
+  }
+
+  // Табличка «Новый монстр» под верхней панелью: картинка, имя и чем он опасен. Через несколько секунд исчезает.
+  enemyTip(type, row) {
+    const y = 170 + row * 130, o = [];
+    const g = this.add.graphics().setDepth(26); o.push(g);
+    g.fillStyle(0x000000, 0.35); g.fillRoundedRect(23, y - 50 + 5, W - 40, 112, 16);
+    g.fillStyle(0x2a1f45, 0.96); g.fillRoundedRect(20, y - 50, W - 40, 112, 16);
+    g.lineStyle(3, 0xffe066); g.strokeRoundedRect(20, y - 50, W - 40, 112, 16);
+    o.push(this.add.image(84, y + 8, 'e_' + type).setDisplaySize(84, 84).setDepth(27));
+    o.push(this.add.text(150, y - 26, `${L('newEnemy')}: ${L('e_' + type)}`, { fontFamily: FONT, fontSize: '24px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(27));
+    o.push(this.add.text(150, y + 22, L('n_' + type), { fontFamily: FONT, fontSize: '20px', color: '#ffffff', lineSpacing: 4 }).setOrigin(0, 0.5).setDepth(27));
+    this.tweens.add({ targets: o, alpha: { from: 0, to: 1 }, duration: 250 });
+    this.tweens.add({ targets: o, alpha: 0, delay: 6500, duration: 500, onComplete: () => o.forEach(x => x.destroy()) });
   }
 
   // ---------- интерфейс ----------
@@ -330,7 +351,7 @@ class GameScene extends Phaser.Scene {
       // Что изменится
       const row = (y, name, a, b) => { txt(534, y, name, '18px', '#b9b2cc', false, 0); txt(534, y + 26, `${a} → `, '24px', '#ffffff', true, 0);
         const w = this.panelItems[this.panelItems.length - 1].width; txt(534 + w, y + 26, String(b), '24px', '#7CFC8A', true, 0); };
-      row(1000, L('damage'), Math.round(cur.dmg), Math.round(nx.dmg));
+      row(1000, d.poison ? L('poisonPs') : L('damage'), Math.round(cur.poison || cur.dmg), Math.round(nx.poison || nx.dmg));
       row(1072, L('range'), Math.round(cur.range), Math.round(nx.range));
       this.btn(190, 1228, 340, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
       this.price(190, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
@@ -338,7 +359,7 @@ class GameScene extends Phaser.Scene {
       this.price(540, 1225, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 26, '#fff', '#ffe066');
     } else {
       txt(480, 990, L('maxEvo'), '26px', '#ffe066', true);
-      txt(480, 1040, L('damageN', Math.round(cur.dmg)), '24px', '#ffffff', true);
+      txt(480, 1040, d.poison ? L('poisonN', Math.round(cur.poison)) : L('damageN', Math.round(cur.dmg)), '24px', '#ffffff', true);
       txt(480, 1076, L('rangeN', Math.round(cur.range)), '24px', '#ffffff', true);
       txt(480, 1112, L('aps', (1 / cur.rate).toFixed(1)), '24px', '#ffffff', true);
       this.btn(W / 2, 1228, 680, 80, '', 0xa33a3a, true, () => this.sell(t));
@@ -347,7 +368,7 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- витрина стражей ----------
-  // Окно найма в духе «Героев»: три высокие карточки с живым портретом, характеристиками и ценой.
+  // Окно найма в духе «Героев»: четыре высокие карточки с живым портретом, характеристиками и ценой.
   // Если для стража есть лист кадров (src/anims.js), портрет проигрывает покой и время от времени атаку;
   // иначе показывается картинка с «дыханием» и условным показом атаки.
   shop(slot) {
@@ -355,26 +376,27 @@ class GameScene extends Phaser.Scene {
     const T = 938, CH = 334;                                    // верх и высота карточек
     add(UI.bar(this, W / 2, (928 + H) / 2, W, H - 928, 'top').setDepth(D - 1).setInteractive());
     TOWER_ORDER.forEach((type, i) => {
-      const d = TOWERS[type], ok = this.gold >= d.cost, cx = 122 + i * 238, key = `t_${type}_1`;
-      const card = add(UI.card(this, cx, T + CH / 2, 226, CH, ok ? d.color : 0x666666, !ok).setDepth(D).setInteractive());
+      const d = TOWERS[type], ok = this.gold >= d.cost, cx = 92 + i * 178.5, key = `t_${type}_1`;
+      const PW = 152, PH = 128;                                 // размер портрета
+      const card = add(UI.card(this, cx, T + CH / 2, 170, CH, ok ? d.color : 0x666666, !ok).setDepth(D).setInteractive());
       if (ok) card.on('pointerdown', () => this.build(slot, type));
 
       // Портрет
-      const py = T + 95, feet = T + 168;
-      add(this.add.rectangle(cx, py, 206, 174, 0x0e0e0e).setStrokeStyle(2, 0x000000).setDepth(D + 1));
+      const py = T + 76, feet = T + 132;
+      add(this.add.rectangle(cx, py, PW, PH, 0x0e0e0e).setStrokeStyle(2, 0x000000).setDepth(D + 1));
       const cine = this.anims.exists('p_' + type);
       if (cine) {                                               // киношный портрет: ролик в рамке целиком
-        const v = add(this.add.sprite(cx, py, 'p_' + type).setDisplaySize(206, 174).setDepth(D + 2));
+        const v = add(this.add.sprite(cx, py, 'p_' + type).setDisplaySize(PW, PH).setDepth(D + 2));
         if (ok) v.play({ key: 'p_' + type, startFrame: (i * 9) % PORTRAITS[type].frames }); else v.setAlpha(0.35);
-        add(this.add.rectangle(cx, py, 206, 174).setStrokeStyle(3, ok ? d.color : 0x555555).setDepth(D + 3));
+        add(this.add.rectangle(cx, py, PW, PH).setStrokeStyle(3, ok ? d.color : 0x555555).setDepth(D + 3));
       }
       if (!cine) {
-      add(this.add.ellipse(cx, feet - 2, 150, 34, d.color, ok ? 0.28 : 0.1).setDepth(D + 1));
+      add(this.add.ellipse(cx, feet - 2, 116, 26, d.color, ok ? 0.28 : 0.1).setDepth(D + 1));
       const rays = add(this.add.graphics().setDepth(D + 1).setPosition(cx, py + 6).setAlpha(ok ? 1 : 0.3));
       rays.fillStyle(d.color, 0.22);
       for (let k = 0; k < 10; k++) {
         const a = k * Math.PI / 5;
-        rays.fillTriangle(0, 0, Math.cos(a - 0.16) * 82, Math.sin(a - 0.16) * 82, Math.cos(a + 0.16) * 82, Math.sin(a + 0.16) * 82);
+        rays.fillTriangle(0, 0, Math.cos(a - 0.16) * 60, Math.sin(a - 0.16) * 60, Math.cos(a + 0.16) * 60, Math.sin(a + 0.16) * 60);
       }
       this.ptween({ targets: rays, angle: 360, duration: 12000, repeat: -1 });
 
@@ -388,7 +410,7 @@ class GameScene extends Phaser.Scene {
         if (ok) this.panelTimers.push(this.time.addEvent({ delay: 3600, startAt: 3600 - 900 - i * 1100, loop: true,
           callback: () => { if (m.active) m.play({ key: key + '_attack', frameRate: meta.shopAttackFps || 14 }); } }));
       } else {                                                  // картинка с «дыханием»
-        const base = 1.75 / TEX_S;
+        const base = 1.3 / TEX_S;
         m = add(this.add.image(cx, feet, key).setOrigin(0.5, 0.86).setScale(base).setDepth(D + 3).setAlpha(ok ? 1 : 0.45));
         this.ptween({ targets: m, scaleY: base * 0.93, scaleX: base * 1.04, duration: 560 + i * 60, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         if (ok) this.panelTimers.push(this.time.addEvent({ delay: 2400, startAt: 2400 - 400 - i * 650, loop: true, callback: () => {
@@ -406,7 +428,7 @@ class GameScene extends Phaser.Scene {
           } else {
             this.ptween({ targets: m, x: cx + 4, duration: 45, yoyo: true, repeat: 4 });
             for (let k = 0; k < 5; k++) {
-              const st = add(this.add.star(cx - 60 + k * 30, feet - 90 - (k % 2) * 26, 4, 3, 9, 0xffffff).setDepth(D + 4));
+              const st = add(this.add.star(cx - 48 + k * 24, feet - 80 - (k % 2) * 22, 4, 3, 8, type === 'poison' ? 0x7fe04a : 0xffffff).setDepth(D + 4));
               this.ptween({ targets: st, y: st.y - 36, angle: 180, alpha: 0, duration: 650, delay: k * 60, onComplete: () => st.destroy() });
             }
           }
@@ -417,12 +439,12 @@ class GameScene extends Phaser.Scene {
 
       // Подписи и характеристики
       const txt = (y, str, size, color, bold) => add(this.add.text(cx, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setDepth(D + 5));
-      txt(T + 200, L('t_' + type), '28px', ok ? '#fff' : '#888', true);
-      txt(T + 227, L('d_' + type), '18px', ok ? '#bbb' : '#666');
-      txt(T + 254, L('shopStats', d.dmg, d.range), '17px', ok ? '#9fd3ff' : '#555');
-      txt(T + 276, L('aps', (1 / d.rate).toFixed(1)), '17px', ok ? '#9fd3ff' : '#555');
-      add(UI.plate(this, cx, T + 305, 200, 36, ok ? 0x2e8b57 : 0x5a2626).setDepth(D + 4));
-      this.price(cx, T + 304, ok ? L('summon') : L('need'), d.cost, D + 5, 23, ok ? '#fff' : '#b88', ok ? '#ffe066' : '#ff7777', !ok);
+      txt(T + 164, L('t_' + type), '25px', ok ? '#fff' : '#888', true);
+      txt(T + 190, L('d_' + type), '15px', ok ? '#bbb' : '#666');
+      txt(T + 220, d.poison ? L('poisonN', d.poison) : L('damageN', d.dmg), '16px', ok ? '#9fd3ff' : '#555');
+      txt(T + 242, L('rangeN', d.range), '16px', ok ? '#9fd3ff' : '#555');
+      add(UI.plate(this, cx, T + 297, 156, 44, ok ? 0x2e8b57 : 0x5a2626).setDepth(D + 4));
+      this.price(cx, T + 296, ok ? L('summon') : L('need'), d.cost, D + 5, 19, ok ? '#fff' : '#b88', ok ? '#ffe066' : '#ff7777', !ok);
     });
   }
 
@@ -479,10 +501,13 @@ class GameScene extends Phaser.Scene {
     const hp = Math.round(d.hp * (1 + BAL.hpGrowth * (this.wave - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * endlessK);
     const bw = d.boss ? 90 : 36;                                   // ширина полоски здоровья
     const e = { hp, maxHp: hp, speed: d.speed, gold: d.gold, r: d.r, dist: 0, slow: 0, dead: false, x: PATH[0][0], y: PATH[0][1],
-      boss: !!d.boss, leak: d.leak || 1, slowK: d.slowK || 0.5, bw };
-    e.gfx = this.add.image(e.x, e.y, 'e_' + type).setScale(1.25 / TEX_S).setDepth(d.boss ? 11 : 10);
+      boss: !!d.boss, leak: d.leak || 1, slowK: d.slowK || 0.5, bw, type,
+      fly: !!d.fly, len: d.fly ? this.flyLen : this.pathLen, heal: d.heal || null, healT: 1,
+      armor: d.armor ? Math.round(d.armor * (1 + BAL.armorGrowth * (this.wave - 1))) : 0, poison: null };
+    if (e.fly) e.shadow = this.add.ellipse(e.x, e.y, 30, 10, 0x000000, 0.25).setDepth(7);
+    e.gfx = this.add.image(e.x, e.y, 'e_' + type).setScale(1.25 / TEX_S).setDepth(d.boss ? 11 : e.fly ? 12 : 10);
     e.barBg = this.add.rectangle(e.x, e.y, bw + 2, d.boss ? 10 : 6, 0x000000).setDepth(12);
-    e.bar = this.add.rectangle(e.x, e.y, bw, d.boss ? 8 : 6, d.boss ? 0xff5a3c : 0x5cff5c).setOrigin(0, 0.5).setDepth(13);
+    e.bar = this.add.rectangle(e.x, e.y, bw, d.boss ? 8 : 6, d.boss ? 0xff5a3c : e.armor ? 0xc9d3e6 : 0x5cff5c).setOrigin(0, 0.5).setDepth(13);
     this.enemies.push(e);
     if (d.boss) { this.floatText(W / 2, 420, L('bossComing'), '#ff5a3c', '64px'); this.cameras.main.shake(300, 0.008); Sfx.play('lose'); }
   }
@@ -491,7 +516,7 @@ class GameScene extends Phaser.Scene {
     const st = this.stats(t);
     Sfx.play(t.type);
     if (!t.anim) this.tweens.add({ targets: t.gfx, angle: { from: target.x < t.x ? -10 : 10, to: 0 }, duration: 160 });
-    const b = { x: t.x, y: t.y, target, tx: target.x, ty: target.y, dmg: st.dmg, splash: st.splash, slow: st.slow };
+    const b = { x: t.x, y: t.y, target, tx: target.x, ty: target.y, dmg: st.dmg, splash: st.splash, slow: st.slow, poison: st.poison, ptime: st.ptime };
     b.gfx = this.add.circle(t.x, t.y, st.splash ? 9 : 6, TOWERS[t.type].color).setStrokeStyle(2, 0x000000).setDepth(13);
     this.bullets.push(b);
   }
@@ -504,8 +529,10 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0, delay: 400, duration: 350, onComplete: () => t.destroy() });
   }
 
-  damage(e, dmg, slow) {
+  // pierce — урон мимо брони (яд). Броня вычитается из каждого удара, но хотя бы 1 урона проходит.
+  damage(e, dmg, slow, pierce) {
     if (e.dead) return;
+    if (e.armor && !pierce) dmg = Math.max(1, dmg - e.armor);
     e.hp -= dmg; if (slow) e.slow = Math.max(e.slow, slow);
     if (e.hp <= 0) { e.dead = true; this.gold += e.gold; this.dirty = true; Sfx.play('kill'); this.floatText(e.x, e.y - e.r, '+' + e.gold, '#ffe066'); }
   }
@@ -525,20 +552,51 @@ class GameScene extends Phaser.Scene {
     for (const e of this.enemies) {
       if (e.dead) continue;
       if (e.slow > 0) e.slow -= dt;
+      if (e.healCd > 0) e.healCd -= dt;
       e.dist += e.speed * (e.slow > 0 ? e.slowK : 1) * dt;
-      if (e.dist >= this.pathLen) {
-        e.dead = true; this.lives -= e.leak; this.dirty = true; Sfx.play('leak'); this.cameras.main.shake(e.boss ? 400 : 120, e.boss ? 0.015 : 0.006);
+      if (e.poison) {                                 // яд: урон каждую секунду мимо брони
+        this.damage(e, e.poison.dps * dt, 0, true); e.poison.t -= dt;
+        if (e.poison.t <= 0) e.poison = null;
+        if (e.dead) continue;
+      }
+      if (e.heal && (e.healT -= dt) <= 0) {           // лекарь подлечивает соседей
+        e.healT = 1; let any = false;
+        for (const o of this.enemies) {
+          if (o === e || o.dead || o.healCd > 0 || o.hp >= o.maxHp || Math.hypot(o.x - e.x, o.y - e.y) > e.heal[1]) continue;
+          o.hp = Math.min(o.maxHp, o.hp + o.maxHp * e.heal[0] * (o.boss ? 0.3 : 1)); o.healCd = 0.95; any = true;
+          const plus = this.add.text(o.x, o.y - o.r, '+', { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold', stroke: '#0c3a16', strokeThickness: 4 }).setOrigin(0.5).setDepth(14);
+          this.tweens.add({ targets: plus, y: o.y - o.r - 30, alpha: 0, duration: 500, onComplete: () => plus.destroy() });
+        }
+        if (any) {
+          Sfx.play('heal');
+          const ring = this.add.circle(e.x, e.y, e.heal[1], 0x7CFC8A, 0.16).setStrokeStyle(3, 0x7CFC8A, 0.7).setDepth(9).setScale(0.2);
+          this.tweens.add({ targets: ring, scale: 1, alpha: 0, duration: 450, onComplete: () => ring.destroy() });
+        }
+      }
+      if (e.dist >= e.len) {
+        e.dead = true; this.lives -= e.leak; this.dirty = true; Sfx.play('leak');
+        this.leaks[e.type] = (this.leaks[e.type] || 0) + 1;   // кто прорвался (для отладки баланса) this.cameras.main.shake(e.boss ? 400 : 120, e.boss ? 0.015 : 0.006);
         const [px, py] = PATH[PATH.length - 1];
         this.floatText(px, py - 50, `−${e.leak} ♥`, '#ff6b6b', e.boss ? '44px' : '30px');
         this.tweens.killTweensOf(this.vignette);
         this.tweens.add({ targets: this.vignette, alpha: { from: 0.8, to: 0 }, duration: 600, ease: 'Quad.easeOut' });
         continue;
       }
-      [e.x, e.y] = this.posAt(e.dist);
-      e.gfx.setPosition(e.x, e.y - Math.abs(Math.sin(e.dist / 8)) * 4).setAngle(Math.sin(e.dist / 8) * 7);
-      if (e.slow > 0) e.gfx.setTint(0x88ccff); else e.gfx.clearTint();
-      e.barBg.setPosition(e.x, e.y - e.r * 1.6 - 8);
-      e.bar.setPosition(e.x - e.bw / 2, e.y - e.r * 1.6 - 8).setScale(Math.max(e.hp / e.maxHp, 0), 1);
+      if (e.fly) {                                    // летун: по прямой над полем, под ним тень
+        const k = e.dist / e.len, [ax, ay] = PATH[0], [zx, zy] = PATH[PATH.length - 1];
+        e.x = ax + (zx - ax) * k; e.y = ay + (zy - ay) * k;
+        e.shadow.setPosition(e.x, e.y + 14);
+        e.gfx.setPosition(e.x, e.y - 22 - Math.sin(e.dist / 9) * 6).setAngle(Math.sin(e.dist / 9) * 5).setScale(1.25 / TEX_S * (1 + Math.sin(e.dist / 4.5) * 0.06), 1.25 / TEX_S);
+      } else {
+        [e.x, e.y] = this.posAt(e.dist);
+        e.gfx.setPosition(e.x, e.y - Math.abs(Math.sin(e.dist / 8)) * 4).setAngle(Math.sin(e.dist / 8) * 7);
+      }
+      e.prog = e.dist / e.len;                        // доля пройденного пути: по ней стражи выбирают цель
+      const cold = e.slow > 0, sick = !!e.poison;
+      if (cold || sick) e.gfx.setTint(cold && sick ? 0x7fd9c0 : cold ? 0x88ccff : 0xa6e86a); else e.gfx.clearTint();
+      const barY = e.y - e.r * 1.6 - 8 - (e.fly ? 26 : 0);
+      e.barBg.setPosition(e.x, barY);
+      e.bar.setPosition(e.x - e.bw / 2, barY).setScale(Math.max(e.hp / e.maxHp, 0), 1);
     }
 
     // Стражи: цель → замах → выстрел → возврат в обычную позу
@@ -557,7 +615,10 @@ class GameScene extends Phaser.Scene {
       const st = this.stats(t); let target = null;
       for (const e of this.enemies) {
         if (e.dead || e.dist <= 0) continue;
-        if (Math.hypot(e.x - t.x, e.y - t.y) <= st.range && (!target || e.dist > target.dist)) target = e;
+        if (Math.hypot(e.x - t.x, e.y - t.y) > st.range) continue;
+        // Ближе всех к порталу; Ядозуб сначала кусает тех, кто ещё не отравлен.
+        const better = !target || (st.poison && !!e.poison !== !!target.poison ? !e.poison : e.prog > target.prog);
+        if (better) target = e;
       }
       if (!target) continue;
       t.cd = st.rate;
@@ -581,14 +642,20 @@ class GameScene extends Phaser.Scene {
           Sfx.play('boom');
           const boom = this.add.circle(b.tx, b.ty, b.splash, 0xffa040, 0.45).setDepth(14);
           this.tweens.add({ targets: boom, alpha: 0, duration: 200, onComplete: () => boom.destroy() });
-        } else this.damage(b.target, b.dmg, b.slow);
+        } else {
+          this.damage(b.target, b.dmg, b.slow);
+          if (b.poison && !b.target.dead) {
+            const p = b.target.poison;
+            b.target.poison = { dps: Math.max(b.poison, p ? p.dps : 0), t: b.ptime };
+          }
+        }
         b.gfx.destroy();
       } else { b.x += dx / d * step; b.y += dy / d * step; b.gfx.setPosition(b.x, b.y); }
     }
     this.bullets = this.bullets.filter(b => !b.done);
 
     // Уборка
-    for (const e of this.enemies) if (e.dead) { e.gfx.destroy(); e.barBg.destroy(); e.bar.destroy(); }
+    for (const e of this.enemies) if (e.dead) { e.gfx.destroy(); e.barBg.destroy(); e.bar.destroy(); if (e.shadow) e.shadow.destroy(); }
     this.enemies = this.enemies.filter(e => !e.dead);
 
     if (this.lives <= 0) { this.lives = 0; this.finish(false); return; }

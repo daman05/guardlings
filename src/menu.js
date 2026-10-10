@@ -60,7 +60,7 @@ function leaderboardOverlay(scene, map) {
 
 // Рекорд (сколько волн пройдено) на карте и открыта ли она.
 function mapBest(i) { return Platform.storage.get('best_' + i, i === 0 ? Platform.storage.get('bestWave', 0) : 0); }
-function mapUnlocked(i) { return i === 0 || mapBest(i - 1) >= WAVES.length; }
+function mapUnlocked(i) { return i === 0 || mapBest(i - 1) >= MAPS[i - 1].waves.length; }
 
 // Загрузка: рисованные монстры из sprites.js превращаются в текстуры.
 // Если какой-то картинки нет, Monsters.makeAll дорисует монстра кодом.
@@ -157,10 +157,10 @@ class MapScene extends Phaser.Scene {
     this.add.text(W / 2, 110, L('chooseMap'), { fontFamily: FONT, fontSize: '56px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
     MAPS.forEach((m, i) => {
-      const cy = 380 + i * 390, open = mapUnlocked(i), best = mapBest(i);
-      const card = UI.card(this, W / 2, cy, 640, 350, open ? 0xf3d27a : 0x777777, !open);
+      const cy = 330 + i * 320, open = mapUnlocked(i), best = mapBest(i), NW = m.waves.length;
+      const card = UI.card(this, W / 2, cy, 640, 296, open ? 0xf3d27a : 0x777777, !open);
       // Мини-схема карты
-      const sc = 0.235, ox = 60, oy = cy - 150, g = this.add.graphics();
+      const sc = 0.2, ox = 66, oy = cy - 128, g = this.add.graphics();
       g.fillStyle(0x2f6b3a); g.fillRect(ox, oy, W * sc, 1280 * sc);
       g.lineStyle(ROAD_W * sc, 0xc9a66b); g.fillStyle(0xc9a66b);
       for (let k = 0; k < m.path.length - 1; k++) {
@@ -174,18 +174,18 @@ class MapScene extends Phaser.Scene {
       if (!open) g.setAlpha(0.35);
 
       const tx = 260;
-      this.add.text(tx, cy - 140, L('mapN', i + 1), { fontFamily: FONT, fontSize: '26px', color: '#aaa' });
-      this.add.text(tx, cy - 105, L('m_' + i), { fontFamily: FONT, fontSize: '44px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
+      this.add.text(tx, cy - 128, L('mapN', i + 1), { fontFamily: FONT, fontSize: '26px', color: '#aaa' });
+      this.add.text(tx, cy - 98, L('m_' + i), { fontFamily: FONT, fontSize: '44px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
       if (open) {
-        const done = best >= WAVES.length;
-        this.add.text(tx, cy - 40, done ? (best > WAVES.length ? L('clearedEndless', best) : L('cleared')) : L('best', best, WAVES.length),
+        const done = best >= NW;
+        this.add.text(tx, cy - 40, done ? (best > NW ? L('clearedEndless', best) : L('cleared')) : L('best', best, NW),
           { fontFamily: FONT, fontSize: '28px', color: done ? '#ffe066' : '#ccc' });
         if (done) {                                     // карта пройдена: рядом с «Играть» кнопка таблицы рекордов
-          uiButton(this, tx + 118, cy + 95, 236, 96, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
-          uiButton(this, tx + 314, cy + 95, 132, 96, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i), 1, '42px');
-        } else uiButton(this, tx + 190, cy + 95, 380, 96, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
+          uiButton(this, tx + 118, cy + 82, 236, 88, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
+          uiButton(this, tx + 314, cy + 82, 132, 88, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i), 1, '42px');
+        } else uiButton(this, tx + 190, cy + 82, 380, 88, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
       } else {
-        this.add.text(tx, cy - 30, L('locked', i), { fontFamily: FONT, fontSize: '23px', color: '#999', lineSpacing: 8 });
+        this.add.text(tx, cy - 34, L('locked', i), { fontFamily: FONT, fontSize: '23px', color: '#999', lineSpacing: 8 });
       }
     });
     uiButton(this, W / 2, 1180, 360, 90, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '36px');

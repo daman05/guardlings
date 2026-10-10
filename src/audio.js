@@ -68,6 +68,8 @@ const Sfx = {
     tap()    { this.tone(700, 0.04, 'square', 0.03); },
     gun()    { this.tone(560, 0.07, 'square', 0.04, 240); },
     cannon() { this.tone(170, 0.14, 'triangle', 0.12, 80); },
+    poison() { this.tone(300, 0.12, 'sawtooth', 0.035, 620); },
+    heal()   { this.tone(880, 0.1, 'sine', 0.03, 1320); },
     frost()  { this.tone(1300, 0.12, 'sine', 0.05, 2300); },
     boom()   { this.noise(0.3, 0.22, 1000); this.tone(95, 0.25, 'sine', 0.2, 40); },
     kill()   { this.tone(320, 0.09, 'square', 0.045, 110); },

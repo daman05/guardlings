@@ -90,6 +90,22 @@ const Monsters = {
     if (lvl >= 3) { g.fillStyle(0xffffff); g.fillTriangle(-12, 19, -2, 19, -7, 29); g.fillTriangle(2, 19, 12, 19, 7, 29); g.fillTriangle(-5, 20, 5, 20, 0, 32); }
   },
 
+  poison(g, lvl) {                                // Ядозуб: фиолетовая змейка-гриб с ядовитыми клыками
+    this.lid = 0xc05ae0;
+    this.shadow(g, 31, 50);
+    const parts = [['e', 20, 24, 30, 12], ['e', -6, 26, 40, 14], ['e', 0, 2, 44, 48]];
+    if (lvl >= 2) parts.unshift(['t', -30, -14, -18, -22, -17, -2], ['t', 30, -14, 18, -22, 17, -2]);
+    if (lvl >= 3) parts.unshift(['t', 0, -44, -9, -18, 9, -18], ['t', -16, -38, -20, -14, -6, -18], ['t', 16, -38, 20, -14, 6, -18]);
+    this.shape(g, 0xc05ae0, parts);
+    g.fillStyle(0xe9b8ff); g.fillEllipse(0, 14, 28, 22);
+    g.fillStyle(0x7fe04a); g.fillCircle(-14, -12, 3.5); g.fillCircle(15, -8, 3); g.fillCircle(-17, 6, 2.5);
+    if (lvl >= 2) { g.fillCircle(12, 8, 2.5); g.fillCircle(-6, -18, 2.5); }
+    this.eye(g, -9, -6, 6, false); this.eye(g, 9, -6, 6, false);
+    g.fillStyle(INK); g.fillRoundedRect(-9, 4, 18, 7, 3);
+    g.fillStyle(0xffffff); g.fillTriangle(-8, 9, -3, 9, -5.5, 16 + lvl * 2); g.fillTriangle(3, 9, 8, 9, 5.5, 16 + lvl * 2);
+    g.fillStyle(0x7fe04a); g.fillCircle(-5.5, 19 + lvl * 2, 2.2); if (lvl >= 3) g.fillCircle(5.5, 19 + lvl * 2, 2.2);
+  },
+
   // ---------- дикие монстры ----------
   normal(g) {                                     // Слизень
     this.shadow(g, 20, 44);
@@ -116,6 +132,33 @@ const Monsters = {
     this.eye(g, -8, -7, 4.5, true); this.eye(g, 8, -7, 4.5, true); this.brows(g, 8, -7, 5);
     g.fillStyle(0x2a0f4a); g.fillRoundedRect(-11, 4, 22, 8, 3);
     g.fillStyle(0xffffff); g.fillTriangle(-9, 12, -4, 12, -6.5, 4); g.fillTriangle(4, 12, 9, 12, 6.5, 4);
+  },
+
+  fly(g) {                                        // Летун: синяя летучая мышка
+    this.shape(g, 0x3f6cb8, [['t', -40, -20, -12, -2, -16, 12], ['t', -30, 8, -12, -2, -14, 14], ['t', 40, -20, 12, -2, 16, 12], ['t', 30, 8, 12, -2, 14, 14]]);
+    this.shape(g, 0x5b8fd9, [['t', -13, -30, -15, -10, -3, -14], ['t', 13, -30, 15, -10, 3, -14], ['e', 0, 2, 32, 34]]);
+    g.fillStyle(0xbfd8ff); g.fillEllipse(0, 9, 18, 14);
+    this.eye(g, -7, -3, 5, true); this.eye(g, 7, -3, 5, true); this.brows(g, 7, -3, 5);
+    g.fillStyle(0xffffff); g.fillTriangle(-5, 8, -1, 8, -3, 14); g.fillTriangle(1, 8, 5, 8, 3, 14);
+  },
+  heal(g) {                                       // Лекарь: зелёный дух с листком и крестом
+    this.shadow(g, 24, 40);
+    this.shape(g, 0x3fae5c, [['t', 0, -40, -10, -20, 6, -22], ['e', 10, -30, 16, 9]]);
+    this.shape(g, 0x6fdc8c, [['e', -12, 20, 14, 10], ['e', 12, 20, 14, 10], ['e', 0, 0, 40, 42]]);
+    g.fillStyle(0xe6ffe9); g.fillEllipse(0, 8, 26, 22);
+    this.eye(g, -8, -9, 5, true); this.eye(g, 8, -9, 5, true); this.brows(g, 8, -9, 5);
+    g.fillStyle(INK); g.fillRect(-9, 4, 18, 9); g.fillRect(-4.5, -1, 9, 19);
+    g.fillStyle(0xff4d6a); g.fillRect(-7, 6, 14, 5); g.fillRect(-2.5, 1, 5, 15);
+  },
+  armor(g) {                                      // Броненосец: жук в стальном панцире
+    this.shadow(g, 26, 52);
+    this.shape(g, 0x6b4a2e, [['e', -18, 20, 14, 9], ['e', 18, 20, 14, 9], ['e', 0, 12, 44, 26]]);
+    this.shape(g, 0x9aa7bd, [['e', 0, -4, 52, 44]]);
+    g.fillStyle(0xd6deeb); g.fillEllipse(-9, -14, 20, 10);
+    g.lineStyle(2.5, INK); g.lineBetween(0, -26, 0, 4); g.lineBetween(-24, -6, 24, -6);
+    g.fillStyle(0x5d6880); [[-14, -16], [14, -16], [-16, 2], [16, 2]].forEach(([x, y]) => g.fillCircle(x, y, 2.6));
+    g.fillStyle(0x6b4a2e); g.fillRoundedRect(-13, 6, 26, 14, 5);
+    this.eye(g, -6, 12, 4, true); this.eye(g, 6, 12, 4, true); this.brows(g, 6, 12, 4);
   },
 
   boss(g) {                                       // Босс (запасной рисунок): громила с короной

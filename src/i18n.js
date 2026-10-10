@@ -3,7 +3,7 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.5', loading: 'Loading…',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.6', loading: 'Loading…',
     languageLabel: 'Language', languageName: 'English', musicOn: '♪  Music: on', musicOff: '♪  Music: off',
     sfxOn: 'Sound effects: on', sfxOff: 'Sound effects: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
@@ -15,7 +15,9 @@ const STRINGS = {
     damage: 'Damage', range: 'Range', damageN: 'Damage {0}', rangeN: 'Range {0}',
     win: 'VICTORY!', lose: 'PORTAL LOST', result: 'Waves cleared: {0}\nBest: {1}',
     nextMap: 'Next map', retry: 'Restart', toMenu: 'Menu', pause: 'PAUSED', pauseInfo: '{0} · wave {1} of {2}', resume: 'Resume',
-    t_gun: 'Spitty', t_cannon: 'Boomtoad', t_frost: 'Frostling',
+    t_gun: 'Spitty', t_cannon: 'Boomtoad', t_frost: 'Frostling', t_poison: 'Venomite', d_poison: 'poison, pierces armor', poisonPs: 'Poison/sec', poisonN: 'Poison {0}/sec',
+    e_fly: 'Flapper', e_heal: 'Mender', e_armor: 'Shellback', m_2: 'Spiral', newEnemy: 'New monster',
+    n_fly: 'Flapper flies straight to the portal,\nignoring the road', n_heal: 'Mender heals monsters nearby.\nGroup your guardians to out-damage it', n_armor: 'Shellback shrugs off weak hits.\nPoison and big blasts work best',
     d_gun: 'rapid spit', d_cannon: 'area blast', d_frost: 'slows enemies',
     e_normal: 'Slime', e_fast: 'Dasher', e_tank: 'Brute', e_boss: 'Boss', m_0: 'Snake', m_1: 'Hook',
     bossComing: 'BOSS!', waveEndless: 'Wave {0} ∞', endless: 'Endless mode', clearedEndless: '★ Cleared · ∞ wave {0}',
@@ -26,7 +28,7 @@ const STRINGS = {
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.5', loading: 'Загрузка…',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.6', loading: 'Загрузка…',
     languageLabel: 'Язык', languageName: 'Русский', musicOn: '♪  Музыка: включена', musicOff: '♪  Музыка: выключена',
     sfxOn: 'Звуки игры: включены', sfxOff: 'Звуки игры: выключены', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
@@ -38,7 +40,9 @@ const STRINGS = {
     damage: 'Урон', range: 'Дальность', damageN: 'Урон {0}', rangeN: 'Дальность {0}',
     win: 'ПОБЕДА!', lose: 'ПОРТАЛ ЗАХВАЧЕН', result: 'Пройдено волн: {0}\nРекорд: {1}',
     nextMap: 'Следующая карта', retry: 'Заново', toMenu: 'В меню', pause: 'ПАУЗА', pauseInfo: '{0} · волна {1} из {2}', resume: 'Продолжить',
-    t_gun: 'Плевун', t_cannon: 'Бомбожаб', t_frost: 'Ледыш',
+    t_gun: 'Плевун', t_cannon: 'Бомбожаб', t_frost: 'Ледыш', t_poison: 'Ядозуб', d_poison: 'яд сквозь броню', poisonPs: 'Яд в секунду', poisonN: 'Яд {0} в секунду',
+    e_fly: 'Летун', e_heal: 'Лекарь', e_armor: 'Броненосец', m_2: 'Спираль', newEnemy: 'Новый монстр',
+    n_fly: 'Летун летит к порталу напрямик,\nне по дороге', n_heal: 'Лекарь лечит монстров рядом.\nСтавьте стражей кучнее, чтобы перебить лечение', n_armor: 'Броненосец не замечает слабые удары.\nПомогут яд и сильные взрывы',
     d_gun: 'быстрые плевки', d_cannon: 'взрыв по площади', d_frost: 'замедляет врагов',
     e_normal: 'Слизень', e_fast: 'Шустрик', e_tank: 'Громила', e_boss: 'Босс', m_0: 'Змейка', m_1: 'Крюк',
     bossComing: 'БОСС!', waveEndless: 'Волна {0} ∞', endless: 'Бесконечный режим', clearedEndless: '★ Пройдена · ∞ волна {0}',
