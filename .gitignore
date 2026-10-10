@@ -1,0 +1,8 @@
+# Исходники из генераторов (ролики, картинки до обработки) — большие и игре не нужны
+assets/images/raw/
+# Оригиналы треков из Suno: в игре используются их копии music_*.mp3 и battle_*.mp3
+assets/audio/Whimsical*.mp3
+# Служебное
+_to_delete/
+.DS_Store
+Thumbs.db

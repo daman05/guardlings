@@ -1,0 +1,17 @@
+# Публикация игры на GitLab Pages.
+# При каждой загрузке изменений в основную ветку GitLab собирает папку public
+# из файлов, нужных игре, и выкладывает её по адресу <логин>.gitlab.io/<имя проекта>.
+pages:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mkdir -p public/assets/audio
+    - cp index.html public/
+    - cp -r src vendor public/
+    - cp assets/icon-*.png public/assets/
+    - cp assets/audio/music_*.mp3 assets/audio/battle_*.mp3 public/assets/audio/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
