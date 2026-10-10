@@ -28,6 +28,8 @@ const Sfx = {
       this.startMusic();
     }
     if (this.ctx.state === 'suspended' && !document.hidden) this.ctx.resume();
+    // Музыка могла не запуститься с первой попытки (браузер ещё не разрешил звук) — пробуем снова.
+    if (this.musicEl && this.musicEl.paused && this.musicEl.getAttribute('src') && !this.muted && !document.hidden) this.musicEl.play().catch(() => {});
   },
   setMusicOn(on) {
     this.musicOn = on; Platform.storage.set('musicOff', !on);
@@ -151,3 +153,7 @@ const Sfx = {
     }, 100);
   }
 };
+
+// Телефонные браузеры разрешают звук только по завершённому касанию (отпускание пальца), а игра ловит
+// начало касания — поэтому музыка могла молчать до похода в настройки. Слушаем касания напрямую.
+['pointerup', 'touchend', 'click', 'keydown'].forEach(e => window.addEventListener(e, () => Sfx.unlock(), true));
