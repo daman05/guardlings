@@ -24,10 +24,13 @@
 <script src="src/audio.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/scenery.js"></script>
-<script src="src/sprites.js"></script>
+<script>
+  // Картинки: в интернете — отдельными файлами (быстрая загрузка), с диска — встроенные в код
+  // (иначе игра не откроется двойным щелчком).
+  (location.protocol === 'file:' ? ['sprites', 'portraits', 'art'] : ['images'])
+    .forEach(n => document.write('<script src="src/' + n + '.js"><\/script>'));
+</script>
 <script src="src/anims.js"></script>
-<script src="src/portraits.js"></script>
-<script src="src/art.js"></script>
 <script src="src/monsters.js"></script>
 <script src="src/menu.js"></script>
 <script src="src/main.js"></script>

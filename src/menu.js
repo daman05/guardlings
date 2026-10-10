@@ -67,39 +67,46 @@ function mapUnlocked(i) { return i === 0 || mapBest(i - 1) >= WAVES.length; }
 class BootScene extends Phaser.Scene {
   constructor() { super('boot'); }
   create() {
-    this.add.text(W / 2, H / 2, L('loading'), { fontFamily: FONT, fontSize: '40px', color: '#fff' }).setOrigin(0.5);
+    // Полоса загрузки
+    this.add.text(W / 2, H / 2 - 50, L('loading'), { fontFamily: FONT, fontSize: '40px', color: '#fff' }).setOrigin(0.5);
+    const BW = 420, BH = 22;
+    this.add.rectangle(W / 2, H / 2 + 20, BW + 8, BH + 8, 0x000000).setStrokeStyle(3, 0x6b5a9e);
+    const bar = this.add.rectangle(W / 2 - BW / 2, H / 2 + 20, 0, BH, 0xffc94a).setOrigin(0, 0.5);
+
+    // Картинка — файл (в интернете) или строка, встроенная в код (при запуске с диска).
+    const load = (src, ok, fail) => { const img = new Image(); img.onload = () => ok(img); img.onerror = fail; img.src = src; };
     const pics = Object.assign({}, SPRITES, ART);                 // спрайты монстров + киношные картинки
     const keys = Object.keys(pics).filter(k => !this.textures.exists(k));
     const sheets = Object.keys(ANIMS).filter(k => !this.textures.exists('a_' + k));
-    const ports = Object.keys(PORTRAITS).filter(k => !this.textures.exists('p_' + k));
-    let left = keys.length + sheets.length + ports.length;
-    const done = () => { if (--left <= 0) this.scene.start('menu'); };
-    if (!left) { this.scene.start('menu'); return; }
-    this.textures.on('onerror', done);
-    for (const k of keys) { this.textures.once('addtexture-' + k, done); this.textures.addBase64(k, pics[k]); }
-    // Киношные портреты для витрины: один зацикленный ролик на стража.
-    for (const k of ports) {
-      const m = PORTRAITS[k], img = new Image();
-      img.onerror = done;
-      img.onload = () => {
-        this.textures.addSpriteSheet('p_' + k, img, { frameWidth: m.fw, frameHeight: m.fh });
-        this.anims.create({ key: 'p_' + k, frames: this.anims.generateFrameNumbers('p_' + k, { start: 0, end: m.frames - 1 }), frameRate: m.fps, repeat: -1 });
-        done();
-      };
-      img.src = m.data;
-    }
+    const total = keys.length + sheets.length;
+    let left = total, started = false;
+    const start = () => { if (started) return; started = true; this.loadPortraits(load); this.scene.start('menu'); };
+    const done = () => { left--; bar.width = BW * (1 - left / total); if (left <= 0) start(); };
+    if (!left) { start(); return; }
+    for (const k of keys) load(pics[k], img => { this.textures.addImage(k, img); done(); }, done);
     // Листы кадров: покой крутится по кругу, атака проигрывается один раз.
     for (const k of sheets) {
-      const m = ANIMS[k], img = new Image();
-      img.onerror = done;
-      img.onload = () => {
+      const m = ANIMS[k];
+      load(m.data, img => {
         this.textures.addSpriteSheet('a_' + k, img, { frameWidth: m.frame, frameHeight: m.frame });
         const fr = r => this.anims.generateFrameNumbers('a_' + k, { start: r[0], end: r[1] });
         this.anims.create({ key: k + '_idle', frames: fr(m.idle), frameRate: m.idleFps, repeat: -1 });
         this.anims.create({ key: k + '_attack', frames: fr(m.attack), frameRate: m.attackFps, repeat: 0 });
         done();
-      };
-      img.src = m.data;
+      }, done);
+    }
+  }
+  // Киношные портреты для витрины тяжёлые (~1,5 МБ), поэтому грузятся в фоне, уже после входа в меню.
+  // Пока портрета нет, витрина показывает обычную картинку стража.
+  loadPortraits(load) {
+    const tex = this.textures, anims = this.anims;              // общие для всей игры, переживают смену сцены
+    for (const k of Object.keys(PORTRAITS)) {
+      if (tex.exists('p_' + k)) continue;
+      const m = PORTRAITS[k];
+      load(m.data, img => {
+        tex.addSpriteSheet('p_' + k, img, { frameWidth: m.fw, frameHeight: m.fh });
+        anims.create({ key: 'p_' + k, frames: anims.generateFrameNumbers('p_' + k, { start: 0, end: m.frames - 1 }), frameRate: m.fps, repeat: -1 });
+      }, () => {});
     }
   }
 }
