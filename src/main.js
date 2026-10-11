@@ -83,7 +83,7 @@ class GameScene extends Phaser.Scene {
     const cross = this.add.line(522, 43, -20, 16, 20, -16, 0xff5555).setOrigin(0).setLineWidth(4).setDepth(23);
     this.showMute = () => { const off = !Sfx.musicOn && !Sfx.sfxOn; mt.setAlpha(off ? 0.35 : 1); cross.setVisible(off); };
     this.showMute();
-    this.speedText = topBtn(600, 'x1', '28px', () => { this.speed = this.speed === 1 ? 2 : 1; this.speedText.setText('x' + this.speed); Sfx.play('tap'); });
+    this.speedText = topBtn(600, 'x1', '28px', () => { this.speed = this.speed % 3 + 1; this.speedText.setText('x' + this.speed); Sfx.play('tap'); });
     topBtn(678, 'II', '30px', () => { Sfx.play('tap'); this.pauseGame(); });
 
     // Сворачивание приложения во время игры ставит паузу.
@@ -233,7 +233,15 @@ class GameScene extends Phaser.Scene {
   }
 
   startWave() {
-    if (this.over || this.waveActive || (!this.endless && this.wave >= WAVES.length)) return;
+    if (this.over || (!this.endless && this.wave >= WAVES.length)) return;
+    if (this.waveActive) {
+      // Следующая волна раньше срока: можно, когда все монстры текущей волны уже вышли.
+      // Игрок сразу получает награду за текущую волну и доплату за смелость.
+      if (this.spawnQueue.length) return;
+      const pay = this.waveReward(this.wave) + this.earlyBonus();
+      this.gold += pay; this.floatText(W / 2, 560, L('earlyDone', pay), '#ffe066', '38px');
+      if (this.wave > this.best) { this.best = this.wave; Platform.storage.set('best_' + MAP_INDEX, this.best); }
+    }
     this.wave++; this.waveActive = true; this.spawnQueue = [];
     if (this.tut === 3) this.tutorial(0);
     for (const [type, count, gap] of (this.wave <= WAVES.length ? WAVES[this.wave - 1] : endlessWave(this.wave)))
@@ -257,6 +265,10 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: o, alpha: { from: 0, to: 1 }, duration: 250 });
     this.tweens.add({ targets: o, alpha: 0, delay: 6500, duration: 500, onComplete: () => o.forEach(x => x.destroy()) });
   }
+
+  waveReward(n) { return BAL.waveBonus[0] + BAL.waveBonus[1] * n; }
+  earlyBonus() { return Math.round(this.waveReward(this.wave) * BAL.earlyBonus); }
+  canCallEarly() { return this.waveActive && !this.spawnQueue.length && this.enemies.length > 0 && (this.endless || this.wave < WAVES.length); }
 
   // ---------- интерфейс ----------
   btn(x, y, w, h, label, color, enabled, cb) {
@@ -301,7 +313,7 @@ class GameScene extends Phaser.Scene {
     // Панель перестраивается только когда реально что-то изменилось,
     // иначе анимация витрины сбрасывалась бы при каждом убитом враге.
     const key = [this.slots.indexOf(s), t ? t.type + t.level + (this.gold >= this.upgradeCost(t)) : '',
-      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.waveActive, this.wave, this.over, this.endless].join('|');
+      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.waveActive, this.wave, this.over, this.endless, this.canCallEarly()].join('|');
     if (key === this.panelKey) return;
     this.panelKey = key; this.clearPanel();
 
@@ -314,7 +326,10 @@ class GameScene extends Phaser.Scene {
       this.panelItems.push(this.add.text(W / 2, y1, L('hint'),
         { fontFamily: FONT, fontSize: '26px', color: '#ccc' }).setOrigin(0.5).setDepth(22));
     }
-    if (this.waveActive) this.btn(W / 2, 1230, 690, 76, this.endless ? L('waveEndless', this.wave) : L('waveGoing', this.wave, WAVES.length), 0x5a4f7a, false);
+    if (this.canCallEarly()) {
+      this.btn(W / 2, 1230, 690, 76, '', 0x8a5a2e, true, () => this.startWave());
+      this.price(W / 2, 1227, L('earlyWave', this.wave + 1), '+' + this.earlyBonus(), 24, 26, '#fff', '#ffe066');
+    } else if (this.waveActive) this.btn(W / 2, 1230, 690, 76, this.endless ? L('waveEndless', this.wave) : L('waveGoing', this.wave, WAVES.length), 0x5a4f7a, false);
     else if (this.endless || this.wave < WAVES.length) this.btn(W / 2, 1230, 690, 76, L('startWave', this.wave + 1), 0x2e6fd1, true, () => this.startWave());
   }
 
@@ -325,7 +340,14 @@ class GameScene extends Phaser.Scene {
     const add = o => { this.panelItems.push(o); return o; };
     add(this.add.rectangle(x, y, w, h, 0x0e0b16).setDepth(depth));
     if (level === 1 && this.anims.exists('p_' + type)) add(this.add.sprite(x, y, 'p_' + type).setDisplaySize(w, h).setDepth(depth + 1)).play('p_' + type);
-    else if (this.textures.exists(`evo_${type}_${level}`)) add(this.add.image(x, y, `evo_${type}_${level}`).setDisplaySize(w, h).setDepth(depth + 1));
+    else if (level > 1 && this.anims.exists(`p_${type}_${level}`)) add(this.add.sprite(x, y, `p_${type}_${level}`).setDisplaySize(w, h).setDepth(depth + 1)).play(`p_${type}_${level}`);
+    else if (this.textures.exists(`evo_${type}_${level}`)) {
+      add(this.add.image(x, y, `evo_${type}_${level}`).setDisplaySize(w, h).setDepth(depth + 1));
+      // Живой портрет стадии догружается по требованию; когда он готов, панель перерисовывается.
+      loadPortrait(this, `${type}_${level}`, PORTRAITS_EVO[`${type}_${level}`], () => {
+        if (this.scene.isActive() && !this.over && this.selected && this.selected.tower) { this.panelKey = null; this.refresh(); }
+      });
+    }
     else add(this.add.image(x, y + h * 0.36, `t_${type}_${level}`).setOrigin(0.5, 0.86).setScale(h / 110 / TEX_S).setDepth(depth + 1));
     return add(this.add.rectangle(x, y, w, h).setStrokeStyle(4, frame).setDepth(depth + 2));
   }
@@ -537,15 +559,20 @@ class GameScene extends Phaser.Scene {
     if (e.hp <= 0) { e.dead = true; this.gold += e.gold; this.dirty = true; Sfx.play('kill'); this.floatText(e.x, e.y - e.r, '+' + e.gold, '#ffe066'); }
   }
 
+  // Ускорение x2 и x3 — это несколько обычных шагов игры за кадр, а не один большой:
+  // так снаряды и монстры не «перепрыгивают» друг друга на высокой скорости.
   update(time, delta) {
-    if (this.over || this.paused) return;
-    const dt = Math.min(delta / 1000, 0.05) * this.speed;
+    const dt = Math.min(delta / 1000, 0.05);
+    for (let i = 0; i < this.speed && !this.over && !this.paused; i++) this.step(dt);
+  }
+
+  step(dt) {
     this.dirty = false;
 
     // Появление врагов
     if (this.spawnQueue.length) {
       this.spawnTimer -= dt;
-      if (this.spawnTimer <= 0) { const q = this.spawnQueue.shift(); this.spawn(q.type); this.spawnTimer = q.gap; }
+      if (this.spawnTimer <= 0) { const q = this.spawnQueue.shift(); this.spawn(q.type); this.spawnTimer = q.gap; if (!this.spawnQueue.length) this.dirty = true; }
     }
 
     // Движение врагов
@@ -662,7 +689,7 @@ class GameScene extends Phaser.Scene {
 
     // Конец волны
     if (this.waveActive && !this.spawnQueue.length && !this.enemies.length) {
-      const bonus = BAL.waveBonus[0] + BAL.waveBonus[1] * this.wave;
+      const bonus = this.waveReward(this.wave);
       this.waveActive = false; this.gold += bonus; this.dirty = true;
       this.floatText(W / 2, 560, L('waveDone', bonus), '#ffe066', '38px');
       if (this.tut === 0 && this.wave === 1 && this.towers.length) this.tutorial(4);
@@ -676,6 +703,6 @@ class GameScene extends Phaser.Scene {
 const game = new Phaser.Game({
   type: Phaser.AUTO, width: W, height: H, backgroundColor: '#111111',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, MenuScene, MapScene, GameScene]
+  scene: [BootScene, MenuScene, MapScene, BookScene, GameScene]
 });
 window.game = game;

@@ -80,7 +80,7 @@ class BootScene extends Phaser.Scene {
     const sheets = Object.keys(ANIMS).filter(k => !this.textures.exists('a_' + k));
     const total = keys.length + sheets.length;
     let left = total, started = false;
-    const start = () => { if (started) return; started = true; this.loadPortraits(load); this.scene.start('menu'); };
+    const start = () => { if (started) return; started = true; this.loadPortraits(); this.scene.start('menu'); };
     const done = () => { left--; bar.width = BW * (1 - left / total); if (left <= 0) start(); };
     if (!left) { start(); return; }
     for (const k of keys) load(pics[k], img => { this.textures.addImage(k, img); done(); }, done);
@@ -96,19 +96,28 @@ class BootScene extends Phaser.Scene {
       }, done);
     }
   }
-  // Киношные портреты для витрины тяжёлые (~1,5 МБ), поэтому грузятся в фоне, уже после входа в меню.
+  // Киношные портреты для витрины тяжёлые, поэтому грузятся в фоне, уже после входа в меню.
   // Пока портрета нет, витрина показывает обычную картинку стража.
-  loadPortraits(load) {
-    const tex = this.textures, anims = this.anims;              // общие для всей игры, переживают смену сцены
-    for (const k of Object.keys(PORTRAITS)) {
-      if (tex.exists('p_' + k)) continue;
-      const m = PORTRAITS[k];
-      load(m.data, img => {
-        tex.addSpriteSheet('p_' + k, img, { frameWidth: m.fw, frameHeight: m.fh });
-        anims.create({ key: 'p_' + k, frames: anims.generateFrameNumbers('p_' + k, { start: 0, end: m.frames - 1 }), frameRate: m.fps, repeat: -1 });
-      }, () => {});
-    }
-  }
+  loadPortraits() { for (const k of Object.keys(PORTRAITS)) loadPortrait(this, k, PORTRAITS[k]); }
+}
+
+// Загружает один живой портрет (лист кадров) и заводит для него анимацию 'p_<ключ>'.
+// Повторные вызовы для того же ключа ничего не делают. cb вызывается, когда портрет готов.
+const portraitsLoading = {};
+function loadPortrait(scene, key, m, cb) {
+  const tex = scene.textures, anims = scene.anims, name = 'p_' + key;
+  if (!m || portraitsLoading[key] || tex.exists(name)) return;
+  // Файл картинки нельзя прочитать при запуске с диска — там остаётся неподвижный портрет.
+  if (location.protocol === 'file:' && !m.data.startsWith('data:')) return;
+  portraitsLoading[key] = true;
+  const img = new Image();
+  img.onload = () => {
+    tex.addSpriteSheet(name, img, { frameWidth: m.fw, frameHeight: m.fh });
+    anims.create({ key: name, frames: anims.generateFrameNumbers(name, { start: 0, end: m.frames - 1 }), frameRate: m.fps, repeat: -1 });
+    if (cb) cb();
+  };
+  img.onerror = () => { portraitsLoading[key] = false; };
+  img.src = m.data;
 }
 
 const MENU_LIFT = 100;            // на сколько подняты картинка и кнопки главного меню (название остаётся на месте)
@@ -143,7 +152,8 @@ class MenuScene extends Phaser.Scene {
       stroke: '#2a1450', strokeThickness: 8 }).setOrigin(0.5);
 
     uiButton(this, W / 2, 1076 - MENU_LIFT, 460, 108, L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '54px');
-    uiButton(this, W / 2, 1190 - MENU_LIFT, 460, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '32px');
+    uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '27px');
+    uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
     this.add.text(W - 14, 1262, L('version'), { fontFamily: FONT, fontSize: '18px', color: '#b9b2cc' }).setOrigin(1, 0.5);
   }
 }
@@ -189,5 +199,41 @@ class MapScene extends Phaser.Scene {
       }
     });
     uiButton(this, W / 2, 1180, 360, 90, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '36px');
+  }
+}
+
+// Справочник: кто из диких монстров чем опасен и какой страж для чего нужен.
+class BookScene extends Phaser.Scene {
+  constructor() { super('book'); }
+  init(data) { this.tab = (data && data.tab) || 'enemies'; }
+  create() {
+    this.input.on('pointerdown', () => Sfx.unlock());
+    Sfx.setMusic('menu'); Monsters.makeAll(this);
+    this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
+    this.add.text(W / 2, 70, L('book'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    const tabBtn = (x, id, label) => uiButton(this, x, 150, 330, 64, label, this.tab === id ? 0x2e6fd1 : 0x5a4f7a, () => { if (this.tab !== id) this.scene.restart({ tab: id }); }, 1, '26px');
+    tabBtn(W / 2 - 172, 'enemies', L('bookWild')); tabBtn(W / 2 + 172, 'towers', L('bookGuards'));
+    const txt = (x, y, str, size, color, bold) => this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal', wordWrap: { width: 690 - x }, lineSpacing: 3 }).setDepth(3);
+    if (this.tab === 'enemies') {
+      Object.keys(ENEMIES).forEach((k, i) => {
+        const e = ENEMIES[k], y = 262 + i * 131;
+        UI.card(this, W / 2, y, 690, 122, e.color);
+        this.add.image(82, y, 'e_' + k).setDisplaySize(100, 100).setDepth(3);
+        txt(150, y - 53, L('e_' + k), '25px', '#ffe066', true);
+        this.add.text(676, y - 40, L('bkEnemy', e.hp, e.speed, e.gold), { fontFamily: FONT, fontSize: '17px', color: '#9fd3ff' }).setOrigin(1, 0.5).setDepth(3);
+        txt(150, y - 20, L('b_' + k), '19px', '#e8e4f2');
+      });
+    } else {
+      TOWER_ORDER.forEach((k, i) => {
+        const d = TOWERS[k], y = 310 + i * 214;
+        UI.card(this, W / 2, y, 690, 202, d.color);
+        for (let l = 1; l <= MAX_LEVEL; l++) this.add.image(64 + (l - 1) * 62, y + 30 + (MAX_LEVEL - l) * 6, `t_${k}_${l}`).setDisplaySize(62 + l * 10, 62 + l * 10).setDepth(3);
+        txt(30, y - 92, L('t_' + k), '27px', '#ffe066', true);
+        this.add.text(676, y - 76, L('bkCost', d.cost), { fontFamily: FONT, fontSize: '20px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(3);
+        txt(250, y - 50, `${d.poison ? L('poisonN', d.poison) : L('damageN', d.dmg)}   ${L('rangeN', d.range)}\n${L('aps', (1 / d.rate).toFixed(1))}`, '18px', '#9fd3ff');
+        txt(250, y + 6, L('g_' + k), '19px', '#e8e4f2');
+      });
+    }
+    uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
   }
 }

@@ -1,7 +1,7 @@
 """Превращает киношный ролик со стражем в живой портрет для витрины.
 
 Использование:
-  python3 tools/video_to_portrait.py <тип стража: gun | cannon | frost> <видео.mp4> [кадров на плавный стык, по умолчанию 0]
+  python3 tools/video_to_portrait.py <тип стража: gun | cannon | frost | poison, либо тип_стадия для экрана эволюции: gun_2, gun_3 ...> <видео.mp4> [кадров на плавный стык, по умолчанию 0]
 
 Что делает: режет видео на кадры (10 в секунду), обрезает под рамку портрета, находит в конце
 ролика кадр, самый похожий на первый (чтобы петля замыкалась без рывка), собирает лист кадров.
@@ -41,12 +41,18 @@ def main():
     os.makedirs(os.path.join(ROOT, 'assets', 'images', 'portraits'), exist_ok=True)
     buf = io.BytesIO(); sheet.save(buf, 'WEBP', quality=80, method=6)
     open(os.path.join(ROOT, 'assets', 'images', 'portraits', kind + '.webp'), 'wb').write(buf.getvalue())
-    meta = {'fw': FW, 'fh': FH, 'frames': len(frames), 'fps': FPS,
-            'data': 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode()}
-    p = os.path.join(ROOT, 'src', 'portraits.js'); js = open(p, encoding='utf-8').read()
+    meta = {'fw': FW, 'fh': FH, 'frames': len(frames), 'fps': FPS}
+    if '_' in kind:
+        # Портрет стадии 2 или 3 (экран эволюции): только файл, в код не встраивается — грузится по требованию.
+        os.makedirs(os.path.join(ROOT, 'assets', 'img'), exist_ok=True)
+        open(os.path.join(ROOT, 'assets', 'img', f'p_{kind}.webp'), 'wb').write(buf.getvalue())
+        meta['data'] = f'assets/img/p_{kind}.webp'; name, var = 'portraits_evo.js', 'PORTRAITS_EVO'
+    else:
+        meta['data'] = 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode(); name, var = 'portraits.js', 'PORTRAITS'
+    p = os.path.join(ROOT, 'src', name); js = open(p, encoding='utf-8').read()
     line = f"  {kind}: {json.dumps(meta)},"
     if re.search(rf"^  {kind}: ", js, re.M): js = re.sub(rf"^  {kind}: .*$", lambda m: line, js, flags=re.M)
-    else: js = js.replace('const PORTRAITS = {\n', 'const PORTRAITS = {\n' + line + '\n', 1)
+    else: js = js.replace('const %s = {\n' % var, 'const %s = {\n' % var + line + '\n', 1)
     open(p, 'w', encoding='utf-8').write(js)
     print(kind, len(frames), 'кадров из', len(files), '| лист', sheet.size, len(buf.getvalue()) // 1024, 'КБ')
 
