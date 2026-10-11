@@ -11,7 +11,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW = os.path.join(ROOT, 'assets', 'images', 'raw')
 B = 'The-second-reference-image-shows-a-baby'
 EVO = {'gun_2': B + '.png', 'gun_3': B + '2.png', 'cannon_2': B + '22.png', 'cannon_3': B + '222.png',
-       'frost_2': B + '33.png', 'frost_3': B + '333.png'}
+       'frost_2': B + '33.png', 'frost_3': B + '333.png',
+       'poison_2': 'poison_2.png', 'poison_3': 'poison_3.png'}
 PW, PH = 480, 404                         # портрет: те же пропорции, что у рамки в витрине
 
 def uri(im, q=82):

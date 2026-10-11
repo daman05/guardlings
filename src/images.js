@@ -27,9 +27,18 @@ const ART = {
  "evo_cannon_3": "assets/img/evo_cannon_3.webp",
  "evo_frost_2": "assets/img/evo_frost_2.webp",
  "evo_frost_3": "assets/img/evo_frost_3.webp",
+ "evo_poison_2": "assets/img/evo_poison_2.webp",
+ "evo_poison_3": "assets/img/evo_poison_3.webp",
  "menu_bg": "assets/img/menu_bg.webp"
 };
 const PORTRAITS = {
+ "poison": {
+  "fw": 330,
+  "fh": 278,
+  "frames": 49,
+  "fps": 10,
+  "data": "assets/img/p_poison.webp"
+ },
  "gun": {
   "fw": 330,
   "fh": 278,
