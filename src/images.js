@@ -1,5 +1,7 @@
 // Список картинок-файлов для версии в интернете. Собирается скриптом tools/export_images.py — руками не править.
 const SPRITES = {
+ "t_poison_2": "assets/img/t_poison_2.webp",
+ "t_poison_1": "assets/img/t_poison_1.webp",
  "t_poison_3": "assets/img/t_poison_3.webp",
  "e_fly": "assets/img/e_fly.webp",
  "e_armor": "assets/img/e_armor.webp",
