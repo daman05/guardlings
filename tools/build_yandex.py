@@ -44,11 +44,11 @@ __FIRST__
 """
 
 def main():
-    shutil.rmtree(OUT, ignore_errors=True)
+    shutil.rmtree(OUT, ignore_errors=True)       # там, где удалять нельзя, файлы просто перезаписываются
     for f in FIRST + SCRIPTS:
         os.makedirs(os.path.dirname(os.path.join(OUT, f)), exist_ok=True); shutil.copy(os.path.join(ROOT, f), os.path.join(OUT, f))
-    shutil.copytree(os.path.join(ROOT, 'assets', 'img'), os.path.join(OUT, 'assets', 'img'))
-    os.makedirs(os.path.join(OUT, 'assets', 'audio'))
+    shutil.copytree(os.path.join(ROOT, 'assets', 'img'), os.path.join(OUT, 'assets', 'img'), dirs_exist_ok=True)
+    os.makedirs(os.path.join(OUT, 'assets', 'audio'), exist_ok=True)
     for a in AUDIO: shutil.copy(os.path.join(ROOT, 'assets', 'audio', a), os.path.join(OUT, 'assets', 'audio', a))
     for f in os.listdir(os.path.join(ROOT, 'assets')):
         if f.startswith('icon-'): shutil.copy(os.path.join(ROOT, 'assets', f), os.path.join(OUT, 'assets', f))
