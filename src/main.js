@@ -593,7 +593,7 @@ class GameScene extends Phaser.Scene {
       }
       e.prog = e.dist / e.len;                        // доля пройденного пути: по ней стражи выбирают цель
       const cold = e.slow > 0, sick = !!e.poison;
-      if (cold || sick) e.gfx.setTint(cold && sick ? 0x7fd9c0 : cold ? 0x88ccff : 0xa6e86a); else e.gfx.clearTint();
+      if (cold || sick) e.gfx.setTint(cold && sick ? 0x7fd9c0 : cold ? 0x88ccff : 0xcdf2a8); else e.gfx.clearTint();
       const barY = e.y - e.r * 1.6 - 8 - (e.fly ? 26 : 0);
       e.barBg.setPosition(e.x, barY);
       e.bar.setPosition(e.x - e.bw / 2, barY).setScale(Math.max(e.hp / e.maxHp, 0), 1);
