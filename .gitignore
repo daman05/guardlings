@@ -6,3 +6,4 @@ assets/audio/Whimsical*.mp3
 _to_delete/
 .DS_Store
 Thumbs.db
+dist/

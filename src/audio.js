@@ -24,15 +24,26 @@ const Sfx = {
       this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
       const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       // Сворачивание приложения: звук замолкает, при возврате продолжается.
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) { this.ctx.suspend(); if (this.musicEl) this.musicEl.pause(); }
-        else { this.ctx.resume(); if (this.musicEl && !this.muted) this.musicEl.play().catch(() => {}); }
-      });
+      // То же при потере фокуса окном (другая вкладка, другое окно) и на время рекламы (Sfx.hold).
+      const sync = () => this.applyHold();
+      document.addEventListener('visibilitychange', sync);
+      window.addEventListener('blur', () => { this.blurred = true; sync(); });
+      window.addEventListener('focus', () => { this.blurred = false; sync(); });
       this.startMusic();
     }
-    if (this.ctx.state === 'suspended' && !document.hidden) this.ctx.resume();
+    if (this.blurred && document.hasFocus()) this.blurred = false;
+    if (document.hidden || this.blurred || this.held) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
     // Музыка могла не запуститься с первой попытки (браузер ещё не разрешил звук) — пробуем снова.
     if (this.musicEl && this.musicEl.paused && this.musicEl.getAttribute('src') && !this.muted && !document.hidden) this.musicEl.play().catch(() => {});
+  },
+  // Звук молчит, пока игра свёрнута, окно без фокуса или идёт реклама.
+  held: false, blurred: false,
+  hold(on) { this.held = on; this.applyHold(); },
+  applyHold() {
+    if (!this.ctx) return;
+    if (document.hidden || this.blurred || this.held) { this.ctx.suspend(); if (this.musicEl) this.musicEl.pause(); }
+    else { this.ctx.resume(); if (this.musicEl && !this.muted) this.musicEl.play().catch(() => {}); }
   },
   setMusicOn(on) {
     this.musicOn = on; Platform.storage.set('musicOff', !on);
@@ -141,7 +152,7 @@ const Sfx = {
       const next = list()[i % list().length];
       if (el.getAttribute('src') === next) el.currentTime = 0;   // тот же трек: перематываем без повторной загрузки
       else el.src = next;
-      if (!this.muted && !document.hidden) el.play().catch(() => {});
+      if (!this.muted && !document.hidden && !this.blurred && !this.held) el.play().catch(() => {});
     };
     // Смена списка: текущий трек быстро затухает, затем начинается трек нового списка.
     this.musicNext = () => { if (el.paused) play(true); else leaving = true; };

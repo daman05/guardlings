@@ -13,7 +13,7 @@ const UP_ORDER = ['gold', 'lives', 'dmg', 'evo', 'cd'];
 const UP_COST = [15, 25, 40, 60, 90];     // цена каждого следующего уровня в кристаллах
 
 // Награды кристаллами.
-const REWARD = { wave: 1, star: 15, endlessWave: 2 };   // за пройденную волну, за каждую новую звезду, за волну бесконечного режима
+const REWARD = { wave: 1, star: 15, endlessWave: 2, ad: 20 };   // за пройденную волну, за каждую новую звезду, за волну бесконечного режима
 // Звёзды за победу: доля сохранённых жизней портала.
 const STAR_AT = [0.9, 0.5];               // от 90 % жизней — три звезды, от 50 % — две, иначе одна
 
@@ -29,8 +29,8 @@ const Meta = {
     this.add(-this.cost(id)); Platform.storage.set('up_' + id, this.level(id) + 1); return true;
   },
   // Звёзды карты. Карты, пройденные до появления звёзд, считаются пройденными на одну.
-  stars(i) { return Platform.storage.get('stars_' + i, mapBest(i) >= MAPS[i].waves.length ? 1 : 0); },
+  stars(i, hard = HARD) { return Platform.storage.get(mk('stars', i, hard), mapBest(i, hard) >= MAPS[i].waves.length ? 1 : 0); },
   starsFor(lives, maxLives) { const k = lives / maxLives; return k >= STAR_AT[0] ? 3 : k >= STAR_AT[1] ? 2 : 1; },
   // Записывает результат победы; возвращает, сколько звёзд добавилось к рекорду карты.
-  win(i, n) { const had = Platform.storage.get('stars_' + i, 0); if (n > had) Platform.storage.set('stars_' + i, n); return Math.max(0, n - had); }
+  win(i, n) { const had = Platform.storage.get(mk('stars', i), 0); if (n > had) Platform.storage.set(mk('stars', i), n); return Math.max(0, n - had); }
 };

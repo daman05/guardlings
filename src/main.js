@@ -2,7 +2,7 @@
 class GameScene extends Phaser.Scene {
   constructor() { super('game'); }
 
-  init(data) { if (data && data.map !== undefined) useMap(data.map); }
+  init(data) { if (data && data.map !== undefined) useMap(data.map, data.hard === undefined ? HARD : data.hard); }
 
   create() {
     this.tweens.resumeAll(); this.anims.resumeAll(); this.paused = false;
@@ -13,7 +13,7 @@ class GameScene extends Phaser.Scene {
     this.waveActive = false; this.spawnQueue = []; this.spawnTimer = 0; this.leaks = {};
     this.enemies = []; this.towers = []; this.bullets = [];
     this.selected = null; this.over = false; this.panelItems = []; this.panelTweens = []; this.panelTimers = []; this.panelKey = null; this.speed = 1;
-    this.best = mapBest(MAP_INDEX);
+    this.best = mapBest(MAP_INDEX, HARD);
 
     Monsters.makeAll(this);
 
@@ -76,6 +76,7 @@ class GameScene extends Phaser.Scene {
     this.coin(150, 45, 15, 21);
     this.goldText = hudText(174, '#ffe066');
     this.waveText = hudText(292, '#8fd0ff');
+    if (HARD) this.waveText.setFontSize(24).setColor('#ff9d8a');     // тяжёлый режим: череп перед номером волны
     this.shownLives = this.lives;
 
     // Красная вспышка по краям поля при потере жизни (градиент от края к центру).
@@ -98,8 +99,8 @@ class GameScene extends Phaser.Scene {
 
     // Сворачивание приложения во время игры ставит паузу.
     const onHide = () => this.pauseGame();
-    this.game.events.on('hidden', onHide);
-    this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
+    this.game.events.on('hidden', onHide); window.addEventListener('blur', onHide);
+    this.events.once('shutdown', () => { this.game.events.off('hidden', onHide); window.removeEventListener('blur', onHide); });
 
     // Нижняя панель
     UI.bar(this, W / 2, 1180, W, 200, 'top').setDepth(20).setInteractive();
@@ -250,13 +251,14 @@ class GameScene extends Phaser.Scene {
       if (this.spawnQueue.length) return;
       const pay = this.waveReward(this.wave) + this.earlyBonus();
       this.gold += pay; this.floatText(W / 2, 560, L('earlyDone', pay), '#ffe066', '38px');
-      if (this.wave > this.best) { this.best = this.wave; Platform.storage.set('best_' + MAP_INDEX, this.best); }
+      if (this.wave > this.best) { this.best = this.wave; Platform.storage.set(mk('best'), this.best); }
     }
     this.wave++; this.waveActive = true; this.spawnQueue = [];
     if (this.tut === 3) this.tutorial(0);
     for (const [type, count, gap] of (this.wave <= WAVES.length ? WAVES[this.wave - 1] : endlessWave(this.wave)))
       for (let i = 0; i < count; i++) this.spawnQueue.push({ type, gap });
-    this.spawnTimer = 0.5; Sfx.play('wave'); this.refresh();
+    this.spawnTimer = 0.5; Sfx.play('wave'); this.refresh(); Platform.gameplay(true);
+    if (this.wave === 2 && this.tut <= 0 && !Platform.storage.get('abTipDone', false)) this.showAbTip();
     // Новый вид монстра: один раз за всю игру показываем подсказку, чем он опасен.
     const fresh = [...new Set(this.spawnQueue.map(q => q.type))].filter(k => L('n_' + k) !== 'n_' + k && !Platform.storage.get('seen_' + k, false));
     fresh.forEach((k, i) => { Platform.storage.set('seen_' + k, true); this.enemyTip(k, i); });
@@ -310,7 +312,7 @@ class GameScene extends Phaser.Scene {
 
   refresh() {
     this.livesText.setText(String(this.lives)); this.goldText.setText(String(this.gold));
-    this.waveText.setText(this.endless ? L('waveEndless', this.wave) : L('wave', this.wave, WAVES.length));
+    this.waveText.setText((HARD ? '☠ ' : '') + (this.endless ? L('waveEndless', this.wave) : L('wave', this.wave, WAVES.length)));
     if (this.lives < this.shownLives) {                        // потеря жизни: сердце вздрагивает
       this.tweens.add({ targets: [this.heart, this.livesText], scale: { from: 1.6, to: 1 }, duration: 350, ease: 'Back.easeOut' });
     }
@@ -486,6 +488,7 @@ class GameScene extends Phaser.Scene {
   }
 
   finish(win) {
+    Platform.gameplay(false); this.hideAbTip();
     this.over = true; this.aim = false; this.aimGfx.setVisible(false); this.selected = null; this.tutorial(this.tut > 0 ? -1 : this.tut); this.refresh(); Sfx.play(win ? 'win' : 'lose');
     const o = this.endItems = [], add = x => { o.push(x); return x; };
     add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.75).setDepth(30).setInteractive());
@@ -493,18 +496,18 @@ class GameScene extends Phaser.Scene {
     if (this.endless) {
       // Конец бесконечного забега: результат попадает в таблицу, топ-10 показывается сразу.
       const score = this.wave - 1;
-      const got = Math.max(0, score - WAVES.length) * REWARD.endlessWave; Meta.add(got);
+      const got = Math.max(0, score - WAVES.length) * REWARD.endlessWave * (HARD ? HARD_MODE.reward : 1); Meta.add(got);
       add(this.add.text(W / 2, 200, L('lose'), { fontFamily: FONT, fontSize: '54px', color: '#ff6b6b', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
       add(this.add.text(W / 2, 266, L('survived', score) + (got ? '    ' + L('crystalsGot', got) : ''), { fontFamily: FONT, fontSize: '30px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
       add(UI.card(this, W / 2, 586, 600, 530, 0xf3d27a).setDepth(31));
       add(this.add.text(W / 2, 352, L('top10Title', L('m_' + MAP_INDEX)), { fontFamily: FONT, fontSize: '26px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5).setDepth(32));
-      const board = 'endless_' + MAP_INDEX;
+      const board = mk('endless');
       Platform.leaderboard.submit(board, score).then(rank => Platform.leaderboard.top(board).then(list => { if (this.over) drawBoard(this, o, list, W / 2, 410, 32, rank); }));
       y = 920;
     } else {
       // Обычное прохождение: звёзды за победу и кристаллы за пройденные волны и новые звёзды.
       const cleared = win ? this.wave : this.wave - 1, stars = win ? Meta.starsFor(this.lives, this.maxLives) : 0;
-      const earned = cleared * REWARD.wave + (win ? Meta.win(MAP_INDEX, stars) * REWARD.star : 0);
+      const earned = cleared * REWARD.wave * (HARD ? HARD_MODE.reward : 1) + (win ? Meta.win(MAP_INDEX, stars) * REWARD.star : 0);
       Meta.add(earned);
       add(this.add.text(W / 2, 330, win ? L('win') : L('lose'), { fontFamily: FONT, fontSize: win ? '72px' : '56px', color: win ? '#7CFC8A' : '#ff6b6b', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
       if (win) for (let k = 0; k < 3; k++) {
@@ -513,21 +516,32 @@ class GameScene extends Phaser.Scene {
       }
       add(this.add.text(W / 2, win ? 566 : 450, L('result', cleared, this.best),
         { fontFamily: FONT, fontSize: '32px', color: '#fff', align: 'center', lineSpacing: 6 }).setOrigin(0.5).setDepth(31));
-      if (earned) add(this.add.text(W / 2, win ? 652 : 540, L('crystalsGot', earned), { fontFamily: FONT, fontSize: '34px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
+      if (earned) {
+        const ct = add(this.add.text(W / 2, win ? 652 : 540, L('crystalsGot', earned), { fontFamily: FONT, fontSize: '34px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
+        if (Platform.ads.rewarded) {                 // удвоение кристаллов за просмотр ролика
+          ct.x = W / 2 - 150;
+          const x2 = uiButton(this, W / 2 + 130, win ? 652 : 540, 250, 60, L('adDouble'), 0x8a5a2e, () => {
+            x2.forEach(q => q.destroy());
+            Platform.ads.showRewarded().then(ok => { if (ok && ct.active) { Meta.add(earned); ct.setText(L('crystalsGot', earned * 2)).setX(W / 2); Sfx.play('evolve'); } else if (ct.active) ct.setX(W / 2); });
+          }, 31, '24px');
+          o.push(...x2);
+        }
+      }
       y = win ? 760 : 680;
     }
     const b = (label, color, cb) => { o.push(...uiButton(this, W / 2, y, 460, 92, label, color, cb, 31, '36px')); y += 112; };
-    if (win && MAP_INDEX + 1 < MAPS.length) b(L('nextMap'), 0x2e8b57, () => this.scene.restart({ map: MAP_INDEX + 1 }));
+    const leave = go => Platform.ads.showInterstitial().then(go);     // между забегами площадка может показать рекламу
+    if (win && MAP_INDEX + 1 < MAPS.length && mapUnlocked(MAP_INDEX + 1, HARD)) b(L('nextMap'), 0x2e8b57, () => leave(() => this.scene.restart({ map: MAP_INDEX + 1 })));
     // После победы можно остаться на карте: волны идут дальше, пока портал держится.
     if (win) b(L('endless'), 0x8a5a2e, () => { o.forEach(x => x.destroy()); this.endItems = []; this.over = false; this.endless = true; this.panelKey = null; this.refresh(); });
-    b(L('retry'), 0x2e6fd1, () => this.scene.restart());
-    b(L('toMenu'), 0x5a4f7a, () => this.scene.start('menu'));
+    b(L('retry'), 0x2e6fd1, () => leave(() => this.scene.restart()));
+    b(L('toMenu'), 0x5a4f7a, () => leave(() => this.scene.start('menu')));
   }
 
   // ---------- пауза ----------
   pauseGame() {
     if (this.over || this.paused) return;
-    this.paused = true; this.tweens.pauseAll(); this.anims.pauseAll();
+    this.paused = true; this.tweens.pauseAll(); this.anims.pauseAll(); Platform.gameplay(false);
     const o = [this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.75).setDepth(30).setInteractive(),
       this.add.text(W / 2, 400, L('pause'), { fontFamily: FONT, fontSize: '80px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31),
       this.add.text(W / 2, 480, L('pauseInfo', L('m_' + MAP_INDEX), this.wave, WAVES.length), { fontFamily: FONT, fontSize: '28px', color: '#ccc' }).setOrigin(0.5).setDepth(31)];
@@ -538,7 +552,7 @@ class GameScene extends Phaser.Scene {
     this.pauseItems = o;
   }
   resumeGame() {
-    this.paused = false; this.tweens.resumeAll(); this.anims.resumeAll();
+    this.paused = false; this.tweens.resumeAll(); this.anims.resumeAll(); if (this.waveActive) Platform.gameplay(true);
     this.pauseItems.forEach(x => x.destroy()); this.pauseItems = [];
   }
 
@@ -546,7 +560,7 @@ class GameScene extends Phaser.Scene {
   spawn(type) {
     const d = ENEMIES[type];
     const endlessK = this.wave > WAVES.length ? Math.pow(BAL.endlessHp, this.wave - WAVES.length) : 1;
-    const hp = Math.round(d.hp * (1 + BAL.hpGrowth * (this.wave - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (d.boss ? MAPS[MAP_INDEX].bossMul || 1 : 1) * endlessK);
+    const hp = Math.round(d.hp * (1 + BAL.hpGrowth * (this.wave - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (d.boss ? MAPS[MAP_INDEX].bossMul || 1 : 1) * (HARD ? HARD_MODE.hp : 1) * endlessK);
     const bw = d.boss ? 90 : 36;                                   // ширина полоски здоровья
     const route = this.routes[this.spawnN++ % this.routes.length];   // дороги по очереди
     const e = { hp, maxHp: hp, speed: d.speed, gold: d.gold, r: d.r, dist: 0, slow: 0, dead: false, x: route.from[0], y: route.from[1], route,
@@ -570,14 +584,33 @@ class GameScene extends Phaser.Scene {
     this.bullets.push(b);
   }
 
+  // Подсказка про способности: один раз за всю игру, в начале второй волны.
+  showAbTip() {
+    const o = this.abTip = [], add = x => { o.push(x); return x; }, cx = W / 2, by = 965;
+    const text = add(this.add.text(cx, by, L('tutAb'), { fontFamily: FONT, fontSize: '25px', color: '#2a1450', fontStyle: 'bold', align: 'center', lineSpacing: 6 }).setOrigin(0.5).setDepth(29));
+    const skip = add(this.add.text(cx, by + text.height / 2 + 14, L('tutSkip'), { fontFamily: FONT, fontSize: '16px', color: '#7a6a9a' }).setOrigin(0.5).setDepth(29));
+    const w = text.width + 44, h = text.height + 52, top = by - text.height / 2 - 16, g = add(this.add.graphics().setDepth(28));
+    g.fillStyle(0x000000, 0.3); g.fillRoundedRect(cx - w / 2 + 3, top + 5, w, h, 16);
+    g.fillStyle(0xfff3c4); g.fillRoundedRect(cx - w / 2, top, w, h, 16);
+    for (const tx of [185, 535]) g.fillTriangle(tx - 16, top + h - 1, tx + 16, top + h - 1, tx, top + h + 20);     // стрелки к обеим кнопкам
+    g.lineStyle(3, 0x2a1450); g.strokeRoundedRect(cx - w / 2, top, w, h, 16);
+    this.tweens.add({ targets: o, y: '-=8', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    add(this.add.zone(cx, by + 8, w, h).setInteractive().setDepth(29)).on('pointerdown', () => this.hideAbTip());
+  }
+  hideAbTip() {
+    if (!this.abTip) return;
+    this.abTip.forEach(x => x.destroy()); this.abTip = null; Platform.storage.set('abTipDone', true);
+  }
+
   // ---------- способности игрока ----------
   abilityCd(id) { return ABILITIES[id].cd * (1 - Meta.bonus('cd') / 100); }
 
   // Метеор: падает в точку и бьёт всех в радиусе мимо брони.
   meteor(x, y) {
     const a = ABILITIES.meteor;
+    this.hideAbTip();
     this.aim = false; this.aimGfx.setVisible(false); this.cd.meteor = this.abilityCd('meteor'); this.panelKey = null; this.refresh();
-    const dmg = a.dmg * (1 + BAL.hpGrowth * (Math.max(1, this.wave) - 1)) * (MAPS[MAP_INDEX].hpMul || 1);
+    const dmg = a.dmg * (1 + BAL.hpGrowth * (Math.max(1, this.wave) - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (HARD ? HARD_MODE.hp : 1);
     const rock = this.add.circle(x + 260, y - 620, 26, 0xff7a1a).setStrokeStyle(5, 0x5a1c00).setDepth(17);
     const tail = this.add.triangle(0, 0, 0, 0, 34, 12, 120, -280, 0xffc04a, 0.7).setDepth(16).setPosition(x + 260, y - 620);
     this.tweens.add({ targets: [rock, tail], x, y, duration: 380, ease: 'Quad.easeIn', onComplete: () => {
@@ -598,6 +631,7 @@ class GameScene extends Phaser.Scene {
   freezeAll() {
     if (this.cd.freeze > 0 || !this.enemies.length) return;
     const a = ABILITIES.freeze;
+    this.hideAbTip();
     this.cd.freeze = this.abilityCd('freeze'); this.panelKey = null;
     for (const e of this.enemies) if (!e.dead) e.frozen = e.boss ? a.bossTime : a.time;
     Sfx.play('frost'); Sfx.play('evolve');
@@ -763,7 +797,8 @@ class GameScene extends Phaser.Scene {
       this.waveActive = false; this.gold += bonus; this.dirty = true;
       this.floatText(W / 2, 560, L('waveDone', bonus), '#ffe066', '38px');
       if (this.tut === 0 && this.wave === 1 && this.towers.length) this.tutorial(4);
-      if (this.wave > this.best) { this.best = this.wave; Platform.storage.set('best_' + MAP_INDEX, this.best); }
+      if (this.wave > this.best) { this.best = this.wave; Platform.storage.set(mk('best'), this.best); }
+      Platform.gameplay(false);
       if (!this.endless && this.wave >= WAVES.length) { this.finish(true); return; }
     }
     if (this.dirty) this.refresh();

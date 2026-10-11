@@ -48,24 +48,25 @@ function drawBoard(scene, o, list, cx, top, depth, hi) {
 }
 
 // Окно «Топ-10» бесконечного режима для карты.
-function leaderboardOverlay(scene, map) {
+function leaderboardOverlay(scene, map, hard = false) {
   const o = [], D = 50, add = x => { o.push(x); return x; };
   add(scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setDepth(D).setInteractive());
   add(UI.card(scene, W / 2, 640, 600, 760, 0xf3d27a).setDepth(D + 1));
-  add(scene.add.text(W / 2, 318, L('top10Title', L('m_' + map)), { fontFamily: FONT, fontSize: '26px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 2));
+  add(scene.add.text(W / 2, 318, L('top10Title', L('m_' + map) + (hard ? ' ☠' : '')), { fontFamily: FONT, fontSize: '26px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 2));
   if (Platform.leaderboard.local) add(scene.add.text(W / 2, 356, L('lbLocal'), { fontFamily: FONT, fontSize: '19px', color: '#9a93b0' }).setOrigin(0.5).setDepth(D + 2));
-  Platform.leaderboard.top('endless_' + map).then(list => drawBoard(scene, o, list, W / 2, 412, D + 2, -1));
+  Platform.leaderboard.top(mk('endless', map, hard)).then(list => drawBoard(scene, o, list, W / 2, 412, D + 2, -1));
   UI.button(scene, W / 2, 940, 300, 84, L('close'), 0x2e6fd1, () => o.forEach(x => x.destroy()), { depth: D + 2, size: '34px' }).forEach(x => o.push(x));
 }
 
 // Рекорд (сколько волн пройдено) на карте и открыта ли она.
-function mapBest(i) { return Platform.storage.get('best_' + i, i === 0 ? Platform.storage.get('bestWave', 0) : 0); }
+function mapBest(i, hard = false) { return Platform.storage.get(mk('best', i, hard), i === 0 && !hard ? Platform.storage.get('bestWave', 0) : 0); }
 // Режим разработчика: открывает все карты, не трогая рекорды. Включается адресом с ?dev=1
 // или пятью быстрыми нажатиями на номер версии в главном меню (так же выключается); выбор запоминается.
 if (/[?&]dev=1/.test(location.search)) Platform.storage.set('dev', true);
 if (/[?&]dev=0/.test(location.search)) Platform.storage.set('dev', false);
-function devMode() { return Platform.storage.get('dev', false); }
-function mapUnlocked(i) { return devMode() || i === 0 || mapBest(i - 1) >= MAPS[i - 1].waves.length; }
+function devMode() { return !Platform.store && Platform.storage.get('dev', false); }
+// Обычный режим: карта открывается после прохождения предыдущей. Тяжёлый: после прохождения этой же карты в обычном.
+function mapUnlocked(i, hard = false) { return devMode() || (hard ? mapBest(i) >= MAPS[i].waves.length : i === 0 || mapBest(i - 1) >= MAPS[i - 1].waves.length); }
 
 // Загрузка: рисованные монстры из sprites.js превращаются в текстуры.
 // Если какой-то картинки нет, Monsters.makeAll дорисует монстра кодом.
@@ -131,6 +132,7 @@ class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
   create() {
     this.tweens.resumeAll(); Sfx.setMusic('menu');
+    Platform.ready();                              // площадке: игра загрузилась, можно играть
     Monsters.makeAll(this);
     this.input.on('pointerdown', () => Sfx.unlock());
     // Заставка: киношная картинка на весь экран (если её нет — прежний зелёный фон с фигурками).
@@ -171,15 +173,19 @@ class MenuScene extends Phaser.Scene {
 
 class MapScene extends Phaser.Scene {
   constructor() { super('maps'); }
+  init(data) { this.hard = !!(data && data.hard); }
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
     Sfx.setMusic('menu');
     this.add.rectangle(W / 2, H / 2, W, H, 0x24512c);
-    this.add.text(W / 2, 84, L('chooseMap'), { fontFamily: FONT, fontSize: '50px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(W / 2, 58, L('chooseMap'), { fontFamily: FONT, fontSize: '44px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    const hard = this.hard;
+    const tab = (x, on, label, to) => uiButton(this, x, 126, 330, 54, label, on ? (to ? 0xa33a3a : 0x2e6fd1) : 0x5a4f7a, () => { if (!on) this.scene.restart({ hard: to }); }, 1, '25px');
+    tab(W / 2 - 172, !hard, L('modeNormal'), false); tab(W / 2 + 172, hard, '☠ ' + L('modeHard'), true);
 
     MAPS.forEach((m, i) => {
-      const cy = 246 + i * 196, open = mapUnlocked(i), best = mapBest(i), NW = m.waves.length, TH = THEMES[m.theme] || THEMES.meadow;
-      UI.card(this, W / 2, cy, 680, 184, open ? 0xf3d27a : 0x777777, !open);
+      const cy = 262 + i * 190, open = mapUnlocked(i, hard), best = mapBest(i, hard), NW = m.waves.length, TH = THEMES[m.theme] || THEMES.meadow;
+      UI.card(this, W / 2, cy, 680, 178, open ? (hard ? 0xe0705a : 0xf3d27a) : 0x777777, !open);
       // Мини-схема карты в цветах её оформления
       const sc = 0.128, ox = 36, oy = cy - 82, g = this.add.graphics();
       g.fillStyle(TH.bg); g.fillRect(ox, oy, W * sc, 1280 * sc);
@@ -198,16 +204,15 @@ class MapScene extends Phaser.Scene {
       this.add.text(tx, cy - 82, L('mapN', i + 1), { fontFamily: FONT, fontSize: '20px', color: '#aaa' });
       this.add.text(tx, cy - 60, L('m_' + i), { fontFamily: FONT, fontSize: '38px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
       if (open) {
-        const n = Meta.stars(i), done = best >= NW;
+        const n = Meta.stars(i, hard), done = best >= NW;
         this.add.text(680, cy - 60, '★'.repeat(n) + '☆'.repeat(3 - n), { fontFamily: FONT, fontSize: '36px', color: n ? '#ffd23d' : '#6a6480' }).setOrigin(1, 0.5).setDepth(3);
         this.add.text(tx, cy - 8, done ? (best > NW ? L('clearedEndless', best) : L('cleared')) : L('best', best, NW),
           { fontFamily: FONT, fontSize: '22px', color: done ? '#ffe066' : '#ccc' });
-        if (done) {                                     // карта пройдена: рядом с «Играть» кнопка таблицы рекордов
-          uiButton(this, 440, cy + 48, 280, 62, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '30px');
-          uiButton(this, 660 - 26, cy + 48, 76, 62, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i), 1, '30px');
-        } else uiButton(this, 506, cy + 48, 330, 62, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '30px');
+        // «Играть» на всех карточках стоит одинаково; у пройденных карт справа добавляется кнопка таблицы рекордов.
+        uiButton(this, 440, cy + 48, 280, 62, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i, hard }), 1, '30px');
+        if (done) uiButton(this, 634, cy + 48, 76, 62, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i, hard), 1, '30px');
       } else {
-        this.add.text(tx, cy - 6, L('locked', i), { fontFamily: FONT, fontSize: '21px', color: '#999', lineSpacing: 6 });
+        this.add.text(tx, cy - 6, hard ? L('lockedHard') : L('locked', i), { fontFamily: FONT, fontSize: '21px', color: '#999', lineSpacing: 6 });
       }
     });
     uiButton(this, W / 2, 1226, 360, 70, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
@@ -239,7 +244,8 @@ class BookScene extends Phaser.Scene {
       TOWER_ORDER.forEach((k, i) => {
         const d = TOWERS[k], y = 310 + i * 214;
         UI.card(this, W / 2, y, 690, 202, d.color);
-        for (let l = 1; l <= MAX_LEVEL; l++) this.add.image(64 + (l - 1) * 62, y + 30 + (MAX_LEVEL - l) * 6, `t_${k}_${l}`).setDisplaySize(62 + l * 10, 62 + l * 10).setDepth(3);
+        // три стадии: одинаковые промежутки между картинками, все стоят на одной линии
+        for (let l = 1, x = 22; l <= MAX_LEVEL; l++) { const sz = 56 + l * 10; this.add.image(x + sz / 2, y + 78, `t_${k}_${l}`).setOrigin(0.5, 1).setDisplaySize(sz, sz).setDepth(3); x += sz - 4; }
         txt(30, y - 92, L('t_' + k), '27px', '#ffe066', true);
         this.add.text(676, y - 76, L('bkCost', d.cost), { fontFamily: FONT, fontSize: '20px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(3);
         txt(250, y - 50, `${d.poison ? L('poisonN', d.poison) : L('damageN', d.dmg)}   ${L('rangeN', d.range)}\n${L('aps', (1 / d.rate).toFixed(1))}`, '18px', '#9fd3ff');
@@ -270,6 +276,8 @@ class UpgradeScene extends Phaser.Scene {
       if (max) this.add.text(566, y + 6, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
       else UI.button(this, 566, y + 6, 196, 76, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
     });
-    uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
+    // Кристаллы за просмотр ролика — только там, где площадка умеет показывать рекламу за награду.
+    if (Platform.ads.rewarded) uiButton(this, W / 2, 1150, 460, 64, L('adCrystals', REWARD.ad), 0x8a5a2e, () => Platform.ads.showRewarded().then(ok => { if (ok) { Meta.add(REWARD.ad); Sfx.play('evolve'); } this.scene.restart(); }), 1, '26px');
+    uiButton(this, W / 2, 1230, 360, 66, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '30px');
   }
 }

@@ -66,6 +66,12 @@ const MAPS = [
 ];
 MAPS.forEach(m => { if (m.paths) m.path = m.paths[0]; else m.paths = [m.path]; });
 let MAP_INDEX = 0, PATH = MAPS[0].path, PATHS = MAPS[0].paths, SLOTS = MAPS[0].slots;
+// Тяжёлый режим: открывается для карты после её прохождения в обычном. У него свои рекорды, звёзды и таблица.
+// hp — во сколько раз здоровее враги, reward — во сколько раз больше кристаллов за волны.
+let HARD = false;
+const HARD_MODE = { hp: 1.5, reward: 2 };
+// Имя записи в сохранениях для карты и режима: best_0 — обычный, besth_0 — тяжёлый.
+function mk(prefix, i = MAP_INDEX, hard = HARD) { return prefix + (hard ? 'h' : '') + '_' + i; }
 
 // Стражи. rate — секунд между атаками; splash — радиус взрыва; slow — секунд замедления.
 const TOWERS = {
@@ -188,7 +194,7 @@ const WAVES_5 = [
 ];
 [WAVES_1, WAVES_2, WAVES_3, WAVES_4, WAVES_5].forEach((w, i) => { MAPS[i].waves = w; });
 let WAVES = WAVES_1;
-function useMap(i) { MAP_INDEX = i; PATH = MAPS[i].path; PATHS = MAPS[i].paths; SLOTS = MAPS[i].slots; WAVES = MAPS[i].waves; }
+function useMap(i, hard = HARD) { HARD = !!hard; MAP_INDEX = i; PATH = MAPS[i].path; PATHS = MAPS[i].paths; SLOTS = MAPS[i].slots; WAVES = MAPS[i].waves; }
 
 // Бесконечный режим (после победы): волны строятся по формуле, каждая пятая — с боссом.
 // Летуны, лекари и броненосцы добавляются только на картах, где они уже встречались.
