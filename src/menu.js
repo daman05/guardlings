@@ -154,6 +154,7 @@ class MenuScene extends Phaser.Scene {
     uiButton(this, W / 2, 1076 - MENU_LIFT, 460, 108, L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '54px');
     uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '27px');
     uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
+    uiButton(this, W / 2, 1272 - MENU_LIFT, 460, 70, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
     this.add.text(W - 14, 1262, L('version'), { fontFamily: FONT, fontSize: '18px', color: '#b9b2cc' }).setOrigin(1, 0.5);
   }
 }
@@ -184,6 +185,7 @@ class MapScene extends Phaser.Scene {
       if (!open) g.setAlpha(0.35);
 
       const tx = 260;
+      if (open) { const n = Meta.stars(i); this.add.text(676, cy - 116, '★'.repeat(n) + '☆'.repeat(3 - n), { fontFamily: FONT, fontSize: '34px', color: n ? '#ffd23d' : '#6a6480' }).setOrigin(1, 0.5).setDepth(3); }
       this.add.text(tx, cy - 128, L('mapN', i + 1), { fontFamily: FONT, fontSize: '26px', color: '#aaa' });
       this.add.text(tx, cy - 98, L('m_' + i), { fontFamily: FONT, fontSize: '44px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
       if (open) {
@@ -234,6 +236,30 @@ class BookScene extends Phaser.Scene {
         txt(250, y + 6, L('g_' + k), '19px', '#e8e4f2');
       });
     }
+    uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
+  }
+}
+
+// Постоянные улучшения за кристаллы (кнопка «Улучшения» в главном меню).
+class UpgradeScene extends Phaser.Scene {
+  constructor() { super('upgrades'); }
+  create() {
+    this.input.on('pointerdown', () => Sfx.unlock());
+    Sfx.setMusic('menu');
+    this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
+    this.add.text(W / 2, 70, L('upgrades'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(W / 2, 138, `◆ ${Meta.crystals}`, { fontFamily: FONT, fontSize: '44px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(W / 2, 190, L('upHint'), { fontFamily: FONT, fontSize: '19px', color: '#b9b2cc', align: 'center' }).setOrigin(0.5);
+    UP_ORDER.forEach((id, i) => {
+      const u = UPGRADES[id], y = 310 + i * 168, lvl = Meta.level(id), max = Meta.maxed(id), ok = !max && Meta.crystals >= Meta.cost(id);
+      UI.card(this, W / 2, y, 690, 156, u.color);
+      this.add.text(34, y - 56, L('up_' + id), { fontFamily: FONT, fontSize: '27px', color: '#ffe066', fontStyle: 'bold' }).setDepth(3);
+      const now = lvl * u.step, next = (lvl + 1) * u.step;
+      this.add.text(34, y - 16, max ? L('upd_' + id, now) : L('upd_' + id, now) + '  →  ' + next, { fontFamily: FONT, fontSize: '21px', color: '#e8e4f2' }).setDepth(3);
+      for (let k = 0; k < UP_COST.length; k++) this.add.rectangle(46 + k * 44, y + 44, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3);
+      if (max) this.add.text(566, y + 6, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
+      else UI.button(this, 566, y + 6, 196, 76, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
+    });
     uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
   }
 }

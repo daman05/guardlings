@@ -7,7 +7,9 @@ class GameScene extends Phaser.Scene {
   create() {
     this.tweens.resumeAll(); this.anims.resumeAll(); this.paused = false;
     Sfx.setMusic('battle');
-    this.gold = BAL.startGold; this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.lives = START_LIVES; this.wave = 0;
+    this.gold = BAL.startGold + Meta.bonus('gold'); this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.wave = 0;
+    this.maxLives = this.lives = START_LIVES + Meta.bonus('lives');
+    this.cd = { meteor: 0, freeze: 0 }; this.aim = false; this.abText = {};
     this.waveActive = false; this.spawnQueue = []; this.spawnTimer = 0; this.leaks = {};
     this.enemies = []; this.towers = []; this.bullets = [];
     this.selected = null; this.over = false; this.panelItems = []; this.panelTweens = []; this.panelTimers = []; this.panelKey = null; this.speed = 1;
@@ -31,6 +33,10 @@ class GameScene extends Phaser.Scene {
     const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x2f6b3a).setInteractive();
     bg.on('pointerdown', () => this.select(null));
     this.input.on('pointerdown', () => Sfx.unlock());
+    // Прицел метеора: круг ходит за пальцем, касание поля — удар.
+    this.aimGfx = this.add.circle(W / 2, 600, ABILITIES.meteor.radius, 0xff7a1a, 0.18).setStrokeStyle(4, 0xffb060, 0.9).setDepth(16).setVisible(false);
+    this.input.on('pointermove', p => { if (this.aim) this.aimGfx.setPosition(p.worldX, Phaser.Math.Clamp(p.worldY, 100, 1070)); });
+    this.input.on('pointerdown', p => { if (this.aim && !this.paused && !this.over && p.worldY > 92 && p.worldY < 1078) this.meteor(p.worldX, p.worldY); });
     const g = this.add.graphics();
     Scenery.ground(g);
     const road = (w, c) => {
@@ -120,10 +126,10 @@ class GameScene extends Phaser.Scene {
   stats(t) {
     const d = TOWERS[t.type];
     return {
-      dmg: d.dmg * Math.pow(1.6, t.level - 1),
+      dmg: d.dmg * Math.pow(1.6, t.level - 1) * (1 + Meta.bonus('dmg') / 100),
       range: d.range * (1 + 0.12 * (t.level - 1)),
       rate: d.rate, splash: d.splash || 0, slow: d.slow || 0,
-      poison: (d.poison || 0) * Math.pow(1.6, t.level - 1), ptime: d.ptime || 0
+      poison: (d.poison || 0) * Math.pow(1.6, t.level - 1) * (1 + Meta.bonus('dmg') / 100), ptime: d.ptime || 0
     };
   }
   // Ставит стражу кадр позы: '' обычный, 'b' моргание, 'w' замах, 'a' атака.
@@ -134,11 +140,11 @@ class GameScene extends Phaser.Scene {
     t.gfx.setTexture(key); return true;
   }
 
-  upgradeCost(t) { return Math.round(TOWERS[t.type].cost * 0.8 * t.level); }
+  upgradeCost(t) { return Math.round(TOWERS[t.type].cost * 0.8 * t.level * (1 - Meta.bonus('evo') / 100)); }
 
   // ---------- действия игрока ----------
   select(slot) {
-    if (this.over) return;
+    if (this.over || this.aim) return;             // пока выбирается цель метеора, поле не реагирует
     if (slot) Sfx.play('tap');
     this.selected = slot;
     if (this.tut === 1 && slot && !slot.tower) this.tutorial(2);
@@ -313,7 +319,7 @@ class GameScene extends Phaser.Scene {
     // Панель перестраивается только когда реально что-то изменилось,
     // иначе анимация витрины сбрасывалась бы при каждом убитом враге.
     const key = [this.slots.indexOf(s), t ? t.type + t.level + (this.gold >= this.upgradeCost(t)) : '',
-      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.waveActive, this.wave, this.over, this.endless, this.canCallEarly()].join('|');
+      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.waveActive, this.wave, this.over, this.endless, this.canCallEarly(), this.cd.meteor <= 0, this.cd.freeze <= 0, this.aim, this.enemies.length > 0].join('|');
     if (key === this.panelKey) return;
     this.panelKey = key; this.clearPanel();
 
@@ -321,11 +327,16 @@ class GameScene extends Phaser.Scene {
 
     if (t) { this.evoPanel(t); return; }             // экран эволюции тоже занимает всю панель
 
-    const y1 = 1135;
-    {
-      this.panelItems.push(this.add.text(W / 2, y1, L('hint'),
-        { fontFamily: FONT, fontSize: '26px', color: '#ccc' }).setOrigin(0.5).setDepth(22));
-    }
+    // Способности игрока: метеор и заморозка. Пока идёт перезарядка, на кнопке тикают секунды.
+    this.abText = {};
+    const abil = (id, x, icon, cb) => {
+      const ready = this.cd[id] <= 0, on = ready && this.enemies.length > 0, aiming = id === 'meteor' && this.aim;
+      const [r, t] = UI.button(this, x, 1130, 336, 62, '', aiming ? 0xd9541a : ABILITIES[id].color === 0xff7a1a ? 0xa8521c : 0x2c7f96, cb, { depth: 22, size: '25px', enabled: on, silent: true });
+      this.panelItems.push(r, t); this.abText[id] = t; t.setData('label', `${icon} ${aiming ? L('abAim') : L('ab_' + id)}`);
+      t.setText(ready ? t.getData('label') : `${icon} ${Math.ceil(this.cd[id])}`);
+    };
+    abil('meteor', 185, '☄', () => { this.aim = !this.aim; this.aimGfx.setVisible(this.aim); Sfx.play('tap'); this.refresh(); });
+    abil('freeze', 535, '❄', () => this.freezeAll());
     if (this.canCallEarly()) {
       this.btn(W / 2, 1230, 690, 76, '', 0x8a5a2e, true, () => this.startWave());
       this.price(W / 2, 1227, L('earlyWave', this.wave + 1), '+' + this.earlyBonus(), 24, 26, '#fff', '#ffe066');
@@ -471,24 +482,35 @@ class GameScene extends Phaser.Scene {
   }
 
   finish(win) {
-    this.over = true; this.selected = null; this.tutorial(this.tut > 0 ? -1 : this.tut); this.refresh(); Sfx.play(win ? 'win' : 'lose');
+    this.over = true; this.aim = false; this.aimGfx.setVisible(false); this.selected = null; this.tutorial(this.tut > 0 ? -1 : this.tut); this.refresh(); Sfx.play(win ? 'win' : 'lose');
     const o = this.endItems = [], add = x => { o.push(x); return x; };
     add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.75).setDepth(30).setInteractive());
     let y = 720;
     if (this.endless) {
       // Конец бесконечного забега: результат попадает в таблицу, топ-10 показывается сразу.
       const score = this.wave - 1;
+      const got = Math.max(0, score - WAVES.length) * REWARD.endlessWave; Meta.add(got);
       add(this.add.text(W / 2, 200, L('lose'), { fontFamily: FONT, fontSize: '54px', color: '#ff6b6b', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
-      add(this.add.text(W / 2, 266, L('survived', score), { fontFamily: FONT, fontSize: '32px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
+      add(this.add.text(W / 2, 266, L('survived', score) + (got ? '    ' + L('crystalsGot', got) : ''), { fontFamily: FONT, fontSize: '30px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
       add(UI.card(this, W / 2, 586, 600, 530, 0xf3d27a).setDepth(31));
       add(this.add.text(W / 2, 352, L('top10Title', L('m_' + MAP_INDEX)), { fontFamily: FONT, fontSize: '26px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5).setDepth(32));
       const board = 'endless_' + MAP_INDEX;
       Platform.leaderboard.submit(board, score).then(rank => Platform.leaderboard.top(board).then(list => { if (this.over) drawBoard(this, o, list, W / 2, 410, 32, rank); }));
       y = 920;
     } else {
-      add(this.add.text(W / 2, 440, win ? L('win') : L('lose'), { fontFamily: FONT, fontSize: win ? '72px' : '56px', color: win ? '#7CFC8A' : '#ff6b6b', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
-      add(this.add.text(W / 2, 560, L('result', win ? this.wave : this.wave - 1, this.best),
-        { fontFamily: FONT, fontSize: '34px', color: '#fff', align: 'center', lineSpacing: 6 }).setOrigin(0.5).setDepth(31));
+      // Обычное прохождение: звёзды за победу и кристаллы за пройденные волны и новые звёзды.
+      const cleared = win ? this.wave : this.wave - 1, stars = win ? Meta.starsFor(this.lives, this.maxLives) : 0;
+      const earned = cleared * REWARD.wave + (win ? Meta.win(MAP_INDEX, stars) * REWARD.star : 0);
+      Meta.add(earned);
+      add(this.add.text(W / 2, 330, win ? L('win') : L('lose'), { fontFamily: FONT, fontSize: win ? '72px' : '56px', color: win ? '#7CFC8A' : '#ff6b6b', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
+      if (win) for (let k = 0; k < 3; k++) {
+        const st = add(this.add.text(W / 2 + (k - 1) * 120, 450 - (k === 1 ? 14 : 0), '★', { fontFamily: FONT, fontSize: '110px', color: k < stars ? '#ffd23d' : '#4a4460', stroke: '#1a1228', strokeThickness: 8 }).setOrigin(0.5).setDepth(31).setScale(0));
+        this.tweens.add({ targets: st, scale: 1, delay: 250 + k * 220, duration: 380, ease: 'Back.easeOut', onStart: () => { if (k < stars) Sfx.play('build'); } });
+      }
+      add(this.add.text(W / 2, win ? 566 : 450, L('result', cleared, this.best),
+        { fontFamily: FONT, fontSize: '32px', color: '#fff', align: 'center', lineSpacing: 6 }).setOrigin(0.5).setDepth(31));
+      if (earned) add(this.add.text(W / 2, win ? 652 : 540, L('crystalsGot', earned), { fontFamily: FONT, fontSize: '34px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31));
+      y = win ? 760 : 680;
     }
     const b = (label, color, cb) => { o.push(...uiButton(this, W / 2, y, 460, 92, label, color, cb, 31, '36px')); y += 112; };
     if (win && MAP_INDEX + 1 < MAPS.length) b(L('nextMap'), 0x2e8b57, () => this.scene.restart({ map: MAP_INDEX + 1 }));
@@ -543,6 +565,42 @@ class GameScene extends Phaser.Scene {
     this.bullets.push(b);
   }
 
+  // ---------- способности игрока ----------
+  abilityCd(id) { return ABILITIES[id].cd * (1 - Meta.bonus('cd') / 100); }
+
+  // Метеор: падает в точку и бьёт всех в радиусе мимо брони.
+  meteor(x, y) {
+    const a = ABILITIES.meteor;
+    this.aim = false; this.aimGfx.setVisible(false); this.cd.meteor = this.abilityCd('meteor'); this.panelKey = null; this.refresh();
+    const dmg = a.dmg * (1 + BAL.hpGrowth * (Math.max(1, this.wave) - 1)) * (MAPS[MAP_INDEX].hpMul || 1);
+    const rock = this.add.circle(x + 260, y - 620, 26, 0xff7a1a).setStrokeStyle(5, 0x5a1c00).setDepth(17);
+    const tail = this.add.triangle(0, 0, 0, 0, 34, 12, 120, -280, 0xffc04a, 0.7).setDepth(16).setPosition(x + 260, y - 620);
+    this.tweens.add({ targets: [rock, tail], x, y, duration: 380, ease: 'Quad.easeIn', onComplete: () => {
+      rock.destroy(); tail.destroy();
+      if (this.over) return;
+      for (const e of this.enemies) if (Math.hypot(e.x - x, e.y - y) <= a.radius) this.damage(e, dmg, 0, true);
+      Sfx.play('boom'); this.cameras.main.shake(220, 0.012);
+      const flash = this.add.circle(x, y, a.radius, 0xffe9a0, 0.85).setDepth(15), ring = this.add.circle(x, y, a.radius * 0.5).setStrokeStyle(8, 0xff7a1a).setDepth(15);
+      this.tweens.add({ targets: flash, alpha: 0, scale: 1.15, duration: 320, onComplete: () => flash.destroy() });
+      this.tweens.add({ targets: ring, alpha: 0, scale: 2.6, duration: 420, onComplete: () => ring.destroy() });
+      const scorch = this.add.ellipse(x, y, a.radius * 1.3, a.radius * 0.8, 0x1a0d05, 0.4).setDepth(4);
+      this.tweens.add({ targets: scorch, alpha: 0, delay: 1500, duration: 2500, onComplete: () => scorch.destroy() });
+      this.refresh();
+    } });
+  }
+
+  // Заморозка: все враги на поле замирают.
+  freezeAll() {
+    if (this.cd.freeze > 0 || !this.enemies.length) return;
+    const a = ABILITIES.freeze;
+    this.cd.freeze = this.abilityCd('freeze'); this.panelKey = null;
+    for (const e of this.enemies) if (!e.dead) e.frozen = e.boss ? a.bossTime : a.time;
+    Sfx.play('frost'); Sfx.play('evolve');
+    const veil = this.add.rectangle(W / 2, 585, W, 990, 0xbfefff, 0.45).setDepth(15);
+    this.tweens.add({ targets: veil, alpha: 0, duration: 600, onComplete: () => veil.destroy() });
+    this.refresh();
+  }
+
   // Всплывающая надпись: «+6» над убитым врагом, «−1» у портала и т. п.
   floatText(x, y, str, color, size = '26px') {
     const t = this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: 'bold', stroke: '#1a1a1a', strokeThickness: 5 })
@@ -568,6 +626,11 @@ class GameScene extends Phaser.Scene {
 
   step(dt) {
     this.dirty = false;
+    for (const id in this.cd) if (this.cd[id] > 0) {             // перезарядка способностей
+      this.cd[id] -= dt;
+      if (this.cd[id] <= 0) this.dirty = true;
+      else if (this.abText[id] && this.abText[id].active) this.abText[id].setText(this.abText[id].getData('label').split(' ')[0] + ' ' + Math.ceil(this.cd[id]));
+    }
 
     // Появление врагов
     if (this.spawnQueue.length) {
@@ -580,7 +643,8 @@ class GameScene extends Phaser.Scene {
       if (e.dead) continue;
       if (e.slow > 0) e.slow -= dt;
       if (e.healCd > 0) e.healCd -= dt;
-      e.dist += e.speed * (e.slow > 0 ? e.slowK : 1) * dt;
+      if (e.frozen > 0) e.frozen -= dt;
+      e.dist += (e.frozen > 0 ? 0 : e.speed * (e.slow > 0 ? e.slowK : 1)) * dt;
       if (e.poison) {                                 // яд: урон каждую секунду мимо брони
         this.damage(e, e.poison.dps * dt, 0, true); e.poison.t -= dt;
         if (e.poison.t <= 0) e.poison = null;
@@ -620,7 +684,8 @@ class GameScene extends Phaser.Scene {
       }
       e.prog = e.dist / e.len;                        // доля пройденного пути: по ней стражи выбирают цель
       const cold = e.slow > 0, sick = !!e.poison;
-      if (cold || sick) e.gfx.setTint(cold && sick ? 0x7fd9c0 : cold ? 0x88ccff : 0xcdf2a8); else e.gfx.clearTint();
+      if (e.frozen > 0) e.gfx.setTint(0x9fe8ff);
+      else if (cold || sick) e.gfx.setTint(cold && sick ? 0x7fd9c0 : cold ? 0x88ccff : 0xcdf2a8); else e.gfx.clearTint();
       const barY = e.y - e.r * 1.6 - 8 - (e.fly ? 26 : 0);
       e.barBg.setPosition(e.x, barY);
       e.bar.setPosition(e.x - e.bw / 2, barY).setScale(Math.max(e.hp / e.maxHp, 0), 1);
@@ -703,6 +768,6 @@ class GameScene extends Phaser.Scene {
 const game = new Phaser.Game({
   type: Phaser.AUTO, width: W, height: H, backgroundColor: '#111111',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, MenuScene, MapScene, BookScene, GameScene]
+  scene: [BootScene, MenuScene, MapScene, BookScene, UpgradeScene, GameScene]
 });
 window.game = game;

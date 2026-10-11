@@ -3,7 +3,7 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.6', loading: 'Loading…',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.7', loading: 'Loading…',
     languageLabel: 'Language', languageName: 'English', musicOn: '♪  Music: on', musicOff: '♪  Music: off',
     sfxOn: 'Sound effects: on', sfxOff: 'Sound effects: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
@@ -37,11 +37,15 @@ const STRINGS = {
     g_cannon: 'Hits an area. Best against crowds and Shellbacks.',
     g_frost: 'Barely hurts but slows enemies. Place it next to strong guardians.',
     g_poison: 'Poison ignores armor and works on several enemies at once. Best against Shellbacks, Brutes and the Boss.',
+    upgrades: 'Upgrades', upHint: 'Crystals come from cleared waves, new stars and endless mode', upMax: 'MAX',
+    up_gold: 'Starting gold', up_lives: 'Portal lives', up_dmg: 'Guardian damage', up_evo: 'Cheaper evolution', up_cd: 'Faster abilities',
+    upd_gold: 'Extra gold at the start: +{0}', upd_lives: 'Extra lives: +{0}', upd_dmg: 'Damage of all guardians: +{0}%', upd_evo: 'Evolution discount: {0}%', upd_cd: 'Abilities recharge faster: {0}%',
+    crystalsGot: '◆ +{0}', ab_meteor: 'Meteor', ab_freeze: 'Freeze', abAim: 'Tap the field',
     tut1: 'Tap the glowing spot\nto place a guardian', tut2: 'Pick a guardian.\nSpitty is cheap and shoots fast',
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.6', loading: 'Загрузка…',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.7', loading: 'Загрузка…',
     languageLabel: 'Язык', languageName: 'Русский', musicOn: '♪  Музыка: включена', musicOff: '♪  Музыка: выключена',
     sfxOn: 'Звуки игры: включены', sfxOff: 'Звуки игры: выключены', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
@@ -75,6 +79,10 @@ const STRINGS = {
     g_cannon: 'Бьёт по площади. Лучший против толпы и Броненосцев.',
     g_frost: 'Почти не ранит, но замедляет. Ставьте рядом с сильными стражами.',
     g_poison: 'Яд не замечает броню и действует сразу на нескольких врагов. Лучший против Броненосцев, Громил и Босса.',
+    upgrades: 'Улучшения', upHint: 'Кристаллы дают за пройденные волны, новые звёзды и бесконечный режим', upMax: 'МАКС',
+    up_gold: 'Стартовое золото', up_lives: 'Жизни портала', up_dmg: 'Урон стражей', up_evo: 'Дешёвая эволюция', up_cd: 'Быстрые способности',
+    upd_gold: 'Золото в начале карты: +{0}', upd_lives: 'Дополнительные жизни: +{0}', upd_dmg: 'Урон всех стражей: +{0}%', upd_evo: 'Скидка на эволюцию: {0}%', upd_cd: 'Способности перезаряжаются быстрее: {0}%',
+    crystalsGot: '◆ +{0}', ab_meteor: 'Метеор', ab_freeze: 'Заморозка', abAim: 'Нажмите на поле',
     tut1: 'Нажмите на светящуюся площадку,\nчтобы поставить стража', tut2: 'Выберите стража.\nПлевун дешёвый и быстро стреляет',
     tut3: 'Теперь запустите волну.\nНе дайте монстрам дойти до портала!', tut4: 'Вы заработали золото!\nНажмите на стража, чтобы он эволюционировал', tutSkip: 'нажмите, чтобы скрыть'
   }
