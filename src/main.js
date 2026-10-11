@@ -7,7 +7,7 @@ class GameScene extends Phaser.Scene {
   create() {
     this.tweens.resumeAll(); this.anims.resumeAll(); this.paused = false;
     Sfx.setMusic('battle');
-    this.gold = BAL.startGold + Meta.bonus('gold'); this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.wave = 0;
+    this.gold = BAL.startGold + (MAPS[MAP_INDEX].gold || 0) + Meta.bonus('gold'); this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.wave = 0;
     this.maxLives = this.lives = START_LIVES + Meta.bonus('lives');
     this.cd = { meteor: 0, freeze: 0 }; this.aim = false; this.abText = {};
     this.waveActive = false; this.spawnQueue = []; this.spawnTimer = 0; this.leaks = {};
@@ -18,19 +18,23 @@ class GameScene extends Phaser.Scene {
     Monsters.makeAll(this);
 
     // Сегменты дороги
-    this.segs = []; let total = 0;
-    for (let i = 0; i < PATH.length - 1; i++) {
-      const [x1, y1] = PATH[i], [x2, y2] = PATH[i + 1];
-      const len = Math.hypot(x2 - x1, y2 - y1);
-      this.segs.push({ x1, y1, x2, y2, len, start: total }); total += len;
-    }
-    this.pathLen = total;
-    // Летуны летят по прямой от входа к порталу.
-    const [fx1, fy1] = PATH[0], [fx2, fy2] = PATH[PATH.length - 1];
-    this.flyLen = Math.hypot(fx2 - fx1, fy2 - fy1);
+    // Дорог на карте может быть несколько (два входа или развилка): у каждой свои сегменты и длина.
+    // flyLen — путь летуна: по прямой от входа этой дороги к порталу.
+    this.routes = PATHS.map(pts => {
+      const segs = []; let total = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x1, y1] = pts[i], [x2, y2] = pts[i + 1], len = Math.hypot(x2 - x1, y2 - y1);
+        segs.push({ x1, y1, x2, y2, len, start: total }); total += len;
+      }
+      const [ax, ay] = pts[0], [zx, zy] = pts[pts.length - 1];
+      return { segs, len: total, from: pts[0], to: pts[pts.length - 1], flyLen: Math.hypot(zx - ax, zy - ay) };
+    });
+    this.segs = [].concat(...this.routes.map(r => r.segs));       // все сегменты сразу: для рисования и декораций
+    this.pathLen = this.routes[0].len; this.spawnN = 0;
+    const TH = THEMES[MAPS[MAP_INDEX].theme] || THEMES.meadow;
 
     // Поле и дорога
-    const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x2f6b3a).setInteractive();
+    const bg = this.add.rectangle(W / 2, H / 2, W, H, TH.bg).setInteractive();
     bg.on('pointerdown', () => this.select(null));
     this.input.on('pointerdown', () => Sfx.unlock());
     // Прицел метеора: круг ходит за пальцем, касание поля — удар.
@@ -46,7 +50,7 @@ class GameScene extends Phaser.Scene {
           Math.abs(s.x2 - s.x1) + w, Math.abs(s.y2 - s.y1) + w);
       }
     };
-    road(ROAD_W + 12, 0x6b5433); road(ROAD_W, 0xc9a66b);
+    road(ROAD_W + 12, TH.edge); road(ROAD_W, TH.road);
     Scenery.props(g, this.segs);
     const [bx, by] = PATH[PATH.length - 1];
     Scenery.portal(this, bx, by);
@@ -113,8 +117,8 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- вспомогательное ----------
-  posAt(dist) {
-    for (const s of this.segs) {
+  posAt(dist, route = this.routes[0]) {
+    for (const s of route.segs) {
       if (dist <= s.start + s.len) {
         const t = (dist - s.start) / s.len;
         return [s.x1 + (s.x2 - s.x1) * t, s.y1 + (s.y2 - s.y1) * t];
@@ -542,11 +546,12 @@ class GameScene extends Phaser.Scene {
   spawn(type) {
     const d = ENEMIES[type];
     const endlessK = this.wave > WAVES.length ? Math.pow(BAL.endlessHp, this.wave - WAVES.length) : 1;
-    const hp = Math.round(d.hp * (1 + BAL.hpGrowth * (this.wave - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * endlessK);
+    const hp = Math.round(d.hp * (1 + BAL.hpGrowth * (this.wave - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (d.boss ? MAPS[MAP_INDEX].bossMul || 1 : 1) * endlessK);
     const bw = d.boss ? 90 : 36;                                   // ширина полоски здоровья
-    const e = { hp, maxHp: hp, speed: d.speed, gold: d.gold, r: d.r, dist: 0, slow: 0, dead: false, x: PATH[0][0], y: PATH[0][1],
+    const route = this.routes[this.spawnN++ % this.routes.length];   // дороги по очереди
+    const e = { hp, maxHp: hp, speed: d.speed, gold: d.gold, r: d.r, dist: 0, slow: 0, dead: false, x: route.from[0], y: route.from[1], route,
       boss: !!d.boss, leak: d.leak || 1, slowK: d.slowK || 0.5, bw, type,
-      fly: !!d.fly, len: d.fly ? this.flyLen : this.pathLen, heal: d.heal || null, healT: 1,
+      fly: !!d.fly, len: d.fly ? route.flyLen : route.len, heal: d.heal || null, healT: 1,
       armor: d.armor ? Math.round(d.armor * (1 + BAL.armorGrowth * (this.wave - 1))) : 0, poison: null };
     if (e.fly) e.shadow = this.add.ellipse(e.x, e.y, 30, 10, 0x000000, 0.25).setDepth(7);
     e.gfx = this.add.image(e.x, e.y, 'e_' + type).setScale(1.25 / TEX_S).setDepth(d.boss ? 11 : e.fly ? 12 : 10);
@@ -674,12 +679,12 @@ class GameScene extends Phaser.Scene {
         continue;
       }
       if (e.fly) {                                    // летун: по прямой над полем, под ним тень
-        const k = e.dist / e.len, [ax, ay] = PATH[0], [zx, zy] = PATH[PATH.length - 1];
+        const k = e.dist / e.len, [ax, ay] = e.route.from, [zx, zy] = e.route.to;
         e.x = ax + (zx - ax) * k; e.y = ay + (zy - ay) * k;
         e.shadow.setPosition(e.x, e.y + 14);
         e.gfx.setPosition(e.x, e.y - 22 - Math.sin(e.dist / 9) * 6).setAngle(Math.sin(e.dist / 9) * 5).setScale(1.25 / TEX_S * (1 + Math.sin(e.dist / 4.5) * 0.06), 1.25 / TEX_S);
       } else {
-        [e.x, e.y] = this.posAt(e.dist);
+        [e.x, e.y] = this.posAt(e.dist, e.route);
         e.gfx.setPosition(e.x, e.y - Math.abs(Math.sin(e.dist / 8)) * 4).setAngle(Math.sin(e.dist / 8) * 7);
       }
       e.prog = e.dist / e.len;                        // доля пройденного пути: по ней стражи выбирают цель

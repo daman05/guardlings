@@ -165,42 +165,42 @@ class MapScene extends Phaser.Scene {
     this.input.on('pointerdown', () => Sfx.unlock());
     Sfx.setMusic('menu');
     this.add.rectangle(W / 2, H / 2, W, H, 0x24512c);
-    this.add.text(W / 2, 110, L('chooseMap'), { fontFamily: FONT, fontSize: '56px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(W / 2, 84, L('chooseMap'), { fontFamily: FONT, fontSize: '50px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
     MAPS.forEach((m, i) => {
-      const cy = 330 + i * 320, open = mapUnlocked(i), best = mapBest(i), NW = m.waves.length;
-      const card = UI.card(this, W / 2, cy, 640, 296, open ? 0xf3d27a : 0x777777, !open);
-      // Мини-схема карты
-      const sc = 0.2, ox = 66, oy = cy - 128, g = this.add.graphics();
-      g.fillStyle(0x2f6b3a); g.fillRect(ox, oy, W * sc, 1280 * sc);
-      g.lineStyle(ROAD_W * sc, 0xc9a66b); g.fillStyle(0xc9a66b);
-      for (let k = 0; k < m.path.length - 1; k++) {
-        const [x1, y1] = m.path[k], [x2, y2] = m.path[k + 1];
+      const cy = 246 + i * 196, open = mapUnlocked(i), best = mapBest(i), NW = m.waves.length, TH = THEMES[m.theme] || THEMES.meadow;
+      UI.card(this, W / 2, cy, 680, 184, open ? 0xf3d27a : 0x777777, !open);
+      // Мини-схема карты в цветах её оформления
+      const sc = 0.128, ox = 36, oy = cy - 82, g = this.add.graphics();
+      g.fillStyle(TH.bg); g.fillRect(ox, oy, W * sc, 1280 * sc);
+      g.lineStyle(ROAD_W * sc, TH.road); g.fillStyle(TH.road);
+      for (const path of m.paths) for (let k = 0; k < path.length - 1; k++) {
+        const [x1, y1] = path[k], [x2, y2] = path[k + 1];
         g.lineBetween(ox + x1 * sc, oy + Math.max(y1, 0) * sc, ox + x2 * sc, oy + y2 * sc);
         g.fillCircle(ox + x2 * sc, oy + y2 * sc, ROAD_W * sc / 2);
       }
-      g.fillStyle(0xffffff, 0.6); for (const [x, y] of m.slots) g.fillCircle(ox + x * sc, oy + y * sc, 5);
+      g.fillStyle(0xffffff, 0.75); for (const [x, y] of m.slots) g.fillCircle(ox + x * sc, oy + y * sc, 3);
       const [px, py] = m.path[m.path.length - 1];
-      g.fillStyle(0xb07cf0); g.fillCircle(ox + px * sc, oy + py * sc, 12);
+      g.fillStyle(0xb07cf0); g.fillCircle(ox + px * sc, oy + py * sc, 8);
       if (!open) g.setAlpha(0.35);
 
-      const tx = 260;
-      if (open) { const n = Meta.stars(i); this.add.text(676, cy - 116, '★'.repeat(n) + '☆'.repeat(3 - n), { fontFamily: FONT, fontSize: '34px', color: n ? '#ffd23d' : '#6a6480' }).setOrigin(1, 0.5).setDepth(3); }
-      this.add.text(tx, cy - 128, L('mapN', i + 1), { fontFamily: FONT, fontSize: '26px', color: '#aaa' });
-      this.add.text(tx, cy - 98, L('m_' + i), { fontFamily: FONT, fontSize: '44px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
+      const tx = 150;
+      this.add.text(tx, cy - 82, L('mapN', i + 1), { fontFamily: FONT, fontSize: '20px', color: '#aaa' });
+      this.add.text(tx, cy - 60, L('m_' + i), { fontFamily: FONT, fontSize: '38px', color: open ? '#fff' : '#888', fontStyle: 'bold' });
       if (open) {
-        const done = best >= NW;
-        this.add.text(tx, cy - 40, done ? (best > NW ? L('clearedEndless', best) : L('cleared')) : L('best', best, NW),
-          { fontFamily: FONT, fontSize: '28px', color: done ? '#ffe066' : '#ccc' });
+        const n = Meta.stars(i), done = best >= NW;
+        this.add.text(680, cy - 60, '★'.repeat(n) + '☆'.repeat(3 - n), { fontFamily: FONT, fontSize: '36px', color: n ? '#ffd23d' : '#6a6480' }).setOrigin(1, 0.5).setDepth(3);
+        this.add.text(tx, cy - 8, done ? (best > NW ? L('clearedEndless', best) : L('cleared')) : L('best', best, NW),
+          { fontFamily: FONT, fontSize: '22px', color: done ? '#ffe066' : '#ccc' });
         if (done) {                                     // карта пройдена: рядом с «Играть» кнопка таблицы рекордов
-          uiButton(this, tx + 118, cy + 82, 236, 88, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
-          uiButton(this, tx + 314, cy + 82, 132, 88, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i), 1, '42px');
-        } else uiButton(this, tx + 190, cy + 82, 380, 88, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '40px');
+          uiButton(this, 440, cy + 48, 280, 62, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '30px');
+          uiButton(this, 660 - 26, cy + 48, 76, 62, '🏆', 0x8a5a2e, () => leaderboardOverlay(this, i), 1, '30px');
+        } else uiButton(this, 506, cy + 48, 330, 62, L('play'), 0x2e6fd1, () => this.scene.start('game', { map: i }), 1, '30px');
       } else {
-        this.add.text(tx, cy - 34, L('locked', i), { fontFamily: FONT, fontSize: '23px', color: '#999', lineSpacing: 8 });
+        this.add.text(tx, cy - 6, L('locked', i), { fontFamily: FONT, fontSize: '21px', color: '#999', lineSpacing: 6 });
       }
     });
-    uiButton(this, W / 2, 1180, 360, 90, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '36px');
+    uiButton(this, W / 2, 1226, 360, 70, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
   }
 }
 
