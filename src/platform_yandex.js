@@ -2,6 +2,9 @@
 // после platform.js и до остальных файлов игры. Заменяет в объекте Platform язык, сохранения,
 // рекламу и таблицу рекордов на то, что даёт SDK Яндекса. Если SDK недоступен, игра работает как обычно.
 const PlatformYandex = {
+  // Реклама выключена, пока не решён вопрос с налоговым режимом. Чтобы включить: ads: true и пересобрать архив
+  // (python tools/build_yandex.py). Тогда появятся реклама между забегами и кнопки «за ролик».
+  ads: false,
   ysdk: null,
   async init() {
     if (typeof YaGames === 'undefined') return;
@@ -23,16 +26,18 @@ const PlatformYandex = {
 
     // Реклама. На время показа звук и игра останавливаются.
     const hold = on => { if (typeof Sfx !== 'undefined') Sfx.hold(on); };
-    Platform.ads.rewarded = true;
-    Platform.ads.showInterstitial = () => new Promise(resolve => {
-      let done = false, open = false; const end = () => { if (!done) { done = true; hold(false); resolve(); } };
-      try { ysdk.adv.showFullscreenAdv({ callbacks: { onOpen: () => { open = true; hold(true); }, onClose: end, onError: end, onOffline: end } }); } catch (e) { end(); }
-      setTimeout(() => { if (!open) end(); }, 4000);          // если площадка не ответила, не держим игрока
-    });
-    Platform.ads.showRewarded = () => new Promise(resolve => {
-      let got = false, done = false; const end = () => { if (!done) { done = true; hold(false); resolve(got); } };
-      try { ysdk.adv.showRewardedVideo({ callbacks: { onOpen: () => hold(true), onRewarded: () => { got = true; }, onClose: end, onError: end } }); } catch (e) { end(); }
-    });
+    if (this.ads) {
+      Platform.ads.rewarded = true;
+      Platform.ads.showInterstitial = () => new Promise(resolve => {
+        let done = false, open = false; const end = () => { if (!done) { done = true; hold(false); resolve(); } };
+        try { ysdk.adv.showFullscreenAdv({ callbacks: { onOpen: () => { open = true; hold(true); }, onClose: end, onError: end, onOffline: end } }); } catch (e) { end(); }
+        setTimeout(() => { if (!open) end(); }, 4000);          // если площадка не ответила, не держим игрока
+      });
+      Platform.ads.showRewarded = () => new Promise(resolve => {
+        let got = false, done = false; const end = () => { if (!done) { done = true; hold(false); resolve(got); } };
+        try { ysdk.adv.showRewardedVideo({ callbacks: { onOpen: () => hold(true), onRewarded: () => { got = true; }, onClose: end, onError: end } }); } catch (e) { end(); }
+      });
+    }
 
     // Таблица рекордов площадки. Названия таблиц в консоли разработчика должны совпадать с именами из игры:
     // endless_0 … endless_4 (обычный режим) и endlessh_0 … endlessh_4 (тяжёлый).
