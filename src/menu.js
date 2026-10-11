@@ -60,7 +60,12 @@ function leaderboardOverlay(scene, map) {
 
 // Рекорд (сколько волн пройдено) на карте и открыта ли она.
 function mapBest(i) { return Platform.storage.get('best_' + i, i === 0 ? Platform.storage.get('bestWave', 0) : 0); }
-function mapUnlocked(i) { return i === 0 || mapBest(i - 1) >= MAPS[i - 1].waves.length; }
+// Режим разработчика: открывает все карты, не трогая рекорды. Включается адресом с ?dev=1
+// или пятью быстрыми нажатиями на номер версии в главном меню (так же выключается); выбор запоминается.
+if (/[?&]dev=1/.test(location.search)) Platform.storage.set('dev', true);
+if (/[?&]dev=0/.test(location.search)) Platform.storage.set('dev', false);
+function devMode() { return Platform.storage.get('dev', false); }
+function mapUnlocked(i) { return devMode() || i === 0 || mapBest(i - 1) >= MAPS[i - 1].waves.length; }
 
 // Загрузка: рисованные монстры из sprites.js превращаются в текстуры.
 // Если какой-то картинки нет, Monsters.makeAll дорисует монстра кодом.
@@ -155,7 +160,12 @@ class MenuScene extends Phaser.Scene {
     uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '27px');
     uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
     uiButton(this, W / 2, 1272 - MENU_LIFT, 460, 70, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
-    this.add.text(W - 14, 1262, L('version'), { fontFamily: FONT, fontSize: '18px', color: '#b9b2cc' }).setOrigin(1, 0.5);
+    const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
+    let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
+    this.add.zone(W - 90, 1250, 180, 60).setInteractive().on('pointerdown', () => {
+      const now = Date.now(); taps = now - last < 600 ? taps + 1 : 1; last = now;
+      if (taps >= 5) { Platform.storage.set('dev', !devMode()); Sfx.play('evolve'); this.scene.restart(); }
+    });
   }
 }
 
