@@ -35,14 +35,17 @@ const UI = {
   plate(scene, x, y, w, h, color, enabled = true) {
     return scene.add.image(x, y, this.buttonTex(scene, w, h, color, enabled)).setDisplaySize(w + 8, h + 12).setOrigin(0.5, (2 + h / 2) / (h + 12));
   },
-  // Блеск на кнопке: светлая полоса раз в пару секунд пробегает слева направо (кнопка «можно купить»).
-  // Возвращает { objs, tween } — объекты удаляются вместе с кнопкой, анимацию надо остановить.
+  // Мягкое золотистое свечение вокруг кнопки «можно купить»: ореол плавно разгорается и гаснет, как дыхание.
+  // Рисуется снаружи кнопки и не закрывает надпись. Возвращает { objs, tween } — удалить вместе с кнопкой.
   shine(scene, x, y, w, h, depth) {
-    const m = scene.make.graphics({ add: false }); m.fillStyle(0xffffff); m.fillRoundedRect(x - w / 2, y - h / 2, w, h, Math.min(18, h / 2.6));
-    const bar = scene.add.rectangle(x - w / 2 - 40, y, 34, h * 1.6, 0xffffff, 0.45).setAngle(18).setDepth(depth).setBlendMode(Phaser.BlendModes.ADD);
-    bar.setMask(m.createGeometryMask());
-    const tween = scene.tweens.add({ targets: bar, x: x + w / 2 + 40, duration: 700, delay: 300, repeatDelay: 1600, repeat: -1, ease: 'Sine.easeInOut' });
-    return { objs: [bar, { destroy: () => m.destroy() }], tween };
+    const g = scene.add.graphics().setDepth(depth).setBlendMode(Phaser.BlendModes.ADD), r = Math.min(18, h / 2.6);
+    for (let k = 1; k <= 7; k++) {                   // несколько контуров: ближние ярче, дальние прозрачнее
+      g.lineStyle(3, 0xffd86b, 0.45 * (1 - k / 8));
+      g.strokeRoundedRect(x - w / 2 - k * 2, y - h / 2 - k * 2 + 2, w + k * 4, h + k * 4, r + k * 2);
+    }
+    g.setAlpha(0.25);
+    const tween = scene.tweens.add({ targets: g, alpha: 1, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    return { objs: [g], tween };
   },
   // Кнопка с подписью. Возвращает [картинка, текст]. opts: depth, size, enabled, silent.
   button(scene, x, y, w, h, label, color, cb, opts = {}) {
