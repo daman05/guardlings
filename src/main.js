@@ -109,6 +109,7 @@ class GameScene extends Phaser.Scene {
 
     // Нижняя панель
     UI.bar(this, W / 2, 1180, W, 200, 'top').setDepth(20).setInteractive();
+    this.barKey = null; this.barItems = [];
 
     // Стражи на поле иногда моргают.
     this.time.addEvent({ delay: 450, loop: true, callback: () => {
@@ -167,7 +168,7 @@ class GameScene extends Phaser.Scene {
     const add = o => { this.tipItems.push(o); return o; };
     const slot = this.slots[4], t = this.towers[0];
     // куда показывает подсказка: [x цели, y цели, y подсказки]
-    const at = { 1: [slot.x, slot.y, slot.y - 130], 2: [W / 2, 930, 850], 3: [W / 2, 1192, 1105], 4: t ? [t.x, t.y - 40, t.y - 170] : [W / 2, 600, 500] }[step];
+    const at = { 1: [slot.x, slot.y, slot.y - 130], 2: [W / 2, PANEL_TOP, PANEL_TOP - 80], 3: [W / 2, BAR_TOP + 6, 1090], 4: t ? [t.x, t.y - 40, t.y - 170] : [W / 2, 600, 500] }[step];
     const [tx, ty, by] = at, bx = Math.min(W - 250, Math.max(250, tx));
     if (step === 1 || step === 4) {                 // пульсирующее кольцо вокруг цели
       const ring = add(this.add.circle(tx, step === 1 ? ty : ty + 40, 40).setStrokeStyle(6, 0xffe066).setDepth(17));
@@ -331,36 +332,58 @@ class GameScene extends Phaser.Scene {
     this.nextRangeGfx.setVisible(!!evo);
     if (evo) this.nextRangeGfx.setPosition(t.x, t.y).setRadius(this.stats({ type: t.type, level: t.level + 1 }).range);
 
+    this.refreshBar();
     // Панель перестраивается только когда реально что-то изменилось,
     // иначе анимация витрины сбрасывалась бы при каждом убитом враге.
     const key = [this.slots.indexOf(s), t ? t.type + t.level + (this.gold >= this.upgradeCost(t)) : '',
-      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.waveActive, this.wave, this.over, this.endless, this.canCallEarly(), this.cd.meteor <= 0, this.cd.freeze <= 0, this.aim, this.enemies.length > 0].join('|');
+      TOWER_ORDER.map(k => this.gold >= TOWERS[k].cost).join(), this.over].join('|');
     if (key === this.panelKey) return;
     this.panelKey = key; this.clearPanel();
 
-    if (s) {                                         // витрина или экран эволюции занимают всю нижнюю панель
+    if (s) {                                         // витрина или экран эволюции: над нижней полосой кнопок
       if (t) this.evoPanel(t); else this.shop(s);
       // Ярлык «✕» над правым краем панели закрывает её (как и нажатие на поле или повторное нажатие на площадку).
-      const [cb, ct] = UI.button(this, W - 52, 894, 84, 62, '✕', 0xa33a3a, () => this.select(null), { depth: 23, size: '34px' });
+      const [cb, ct] = UI.button(this, W - 52, PANEL_TOP - 34, 84, 62, '✕', 0xa33a3a, () => this.select(null), { depth: 23, size: '34px' });
       this.panelItems.push(cb, ct);
       return;
     }
+    this.panelItems.push(this.add.text(W / 2, 1132, L('hint'), { fontFamily: FONT, fontSize: '24px', color: '#ccc' }).setOrigin(0.5).setDepth(22));
+  }
 
-    // Способности игрока: метеор и заморозка. Пока идёт перезарядка, на кнопке тикают секунды.
+  // Нижняя полоса: ☄ Метеор · ⚔ Волна · ❄ Заморозка. Видна всегда, витрина и экран стража открываются над ней.
+  refreshBar() {
+    const early = this.canCallEarly();
+    const key = [this.waveActive, this.wave, this.over, this.endless, early, early && this.earlyBonus(), this.cd.meteor <= 0, this.cd.freeze <= 0, this.aim, this.enemies.length > 0].join('|');
+    if (key === this.barKey) return;
+    this.barKey = key;
+    (this.barItems || []).forEach(o => o.destroy()); const bi = this.barItems = [];
+    const D = 25, y = BAR_Y;
+    bi.push(this.add.rectangle(W / 2, (BAR_TOP + H) / 2, W, H - BAR_TOP, 0x1b1530).setDepth(D - 1).setInteractive());
+    bi.push(this.add.rectangle(W / 2, BAR_TOP, W, 3, 0xd9b45a).setDepth(D - 1));
+    // Способности. Пока идёт перезарядка, на кнопке тикают секунды.
     this.abText = {};
     const abil = (id, x, icon, cb) => {
       const ready = this.cd[id] <= 0, on = ready && this.enemies.length > 0, aiming = id === 'meteor' && this.aim;
-      const [r, t] = UI.button(this, x, 1130, 336, 62, '', aiming ? 0xd9541a : ABILITIES[id].color === 0xff7a1a ? 0xa8521c : 0x2c7f96, cb, { depth: 22, size: '25px', enabled: on, silent: true });
-      this.panelItems.push(r, t); this.abText[id] = t; t.setData('label', `${icon} ${aiming ? L('abAim') : L('ab_' + id)}`);
+      const [r, t] = UI.button(this, x, y, 222, 72, '', aiming ? 0xd9541a : id === 'meteor' ? 0xa8521c : 0x2c7f96, cb, { depth: D, size: aiming ? '20px' : '24px', enabled: on, silent: true });
+      bi.push(r, t); this.abText[id] = t; t.setData('label', `${icon} ${aiming ? L('abAim') : L('ab_' + id)}`);
       t.setText(ready ? t.getData('label') : `${icon} ${Math.ceil(this.cd[id])}`);
     };
-    abil('meteor', 185, '☄', () => { this.aim = !this.aim; this.aimGfx.setVisible(this.aim); Sfx.play('tap'); this.refresh(); });
-    abil('freeze', 535, '❄', () => this.freezeAll());
-    if (this.canCallEarly()) {
-      this.btn(W / 2, 1230, 690, 76, '', 0x8a5a2e, true, () => this.startWave());
-      this.price(W / 2, 1227, L('earlyWave', this.wave + 1), '+' + this.earlyBonus(), 24, 26, '#fff', '#ffe066');
-    } else if (this.waveActive) this.btn(W / 2, 1230, 690, 76, this.endless ? L('waveEndless', this.wave) : L('waveGoing', this.wave, WAVES.length), 0x5a4f7a, false);
-    else if (this.endless || this.wave < WAVES.length) this.btn(W / 2, 1230, 690, 76, L('startWave', this.wave + 1), 0x2e6fd1, true, () => this.startWave());
+    abil('meteor', 122, '☄', () => { this.aim = !this.aim; this.aimGfx.setVisible(this.aim); Sfx.play('tap'); this.refresh(); });
+    abil('freeze', 598, '❄', () => this.freezeAll());
+    // Волна: начать / идёт / вызвать раньше с доплатой.
+    const n = this.wave + (this.waveActive && !early ? 0 : 1), more = this.endless || this.wave < WAVES.length;
+    const ready = early || (!this.waveActive && more && !this.over);
+    const [r, t] = UI.button(this, W / 2, y, 236, 72, '', early ? 0x8a5a2e : ready ? 0x2e6fd1 : 0x5a4f7a, () => this.startWave(), { depth: D, enabled: ready, silent: true });
+    bi.push(r, t);
+    const label = this.add.text(0, y - 1, '⚔ ' + L('waveN', n) + (this.endless ? ' ∞' : ''), { fontFamily: FONT, fontSize: '24px', color: ready ? '#fff' : '#a09ca8', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(D + 1);
+    bi.push(label);
+    if (early) {                                     // «⚔ Волна 5  ●+12»
+      label.setFontSize('22px');
+      const bonus = this.add.text(0, y - 1, '+' + this.earlyBonus(), { fontFamily: FONT, fontSize: '22px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(D + 1);
+      const w = label.width + 10 + 20 + 4 + bonus.width, x0 = W / 2 - w / 2;
+      label.x = x0; const coin = this.coin(x0 + label.width + 20, y - 1, 10, D + 1); bonus.x = x0 + label.width + 34;
+      bi.push(bonus, ...coin);
+    } else label.x = W / 2 - label.width / 2;
   }
 
   // ---------- экран эволюции ----------
@@ -408,46 +431,46 @@ class GameScene extends Phaser.Scene {
   evoPanel(t) {
     const D = 22, add = o => { this.panelItems.push(o); return o; }, d = TOWERS[t.type];
     const txt = (x, y, str, size, color, bold, ox = 0.5) => add(this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox, 0.5).setDepth(D + 5));
-    add(UI.bar(this, W / 2, (928 + H) / 2, W, H - 928, 'top').setDepth(D - 1).setInteractive());
-    const PW = 232, PH = 196, py = 1068, max = t.level >= MAX_LEVEL, cur = this.stats(t);
+    add(UI.bar(this, W / 2, (PANEL_TOP + BAR_TOP) / 2, W, BAR_TOP - PANEL_TOP, 'top').setDepth(D - 1).setInteractive());
+    const PW = 160, PH = 134, py = 1004, max = t.level >= MAX_LEVEL, cur = this.stats(t);
     const stars = n => '★'.repeat(n);
 
-    txt(134, 952, `${L('t_' + t.type)}  ${stars(t.level)}`, '22px', '#ffffff', true);
-    this.portrait(134, py, PW, PH, t.type, t.level, d.color, D);
+    txt(96, 920, `${L('t_' + t.type)}  ${stars(t.level)}`, '20px', '#ffffff', true);
+    this.portrait(96, py, PW, PH, t.type, t.level, d.color, D);
     // Кто это и что умеет: кнопка «i» поверх портрета открывает карточку стража (как в справочнике).
-    const [ib, it] = UI.button(this, 134 + PW / 2 - 24, py - PH / 2 + 24, 40, 40, 'i', 0x2e6fd1, () => this.guardInfo(t), { depth: D + 4, size: '24px' });
+    const [ib, it] = UI.button(this, 96 + PW / 2 - 22, py - PH / 2 + 22, 38, 38, 'i', 0x2e6fd1, () => this.guardInfo(t), { depth: D + 4, size: '24px' });
     this.panelItems.push(ib, it);
 
     if (!max) {
       const c = this.upgradeCost(t), ok = this.gold >= c;
       const nx = this.stats({ type: t.type, level: t.level + 1 });
-      const arrow = txt(268, py, '➜', '44px', '#ffe066', true);
-      this.ptween({ targets: arrow, x: 274, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      txt(402, 952, `${L('evolution')}  ${stars(t.level + 1)}`, '22px', '#ffe066', true);
-      const fr = this.portrait(402, py, PW, PH, t.type, t.level + 1, 0xffe066, D);
+      const arrow = txt(198, py, '➜', '34px', '#ffe066', true);
+      this.ptween({ targets: arrow, x: 204, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      txt(300, 920, `${L('evolution')}  ${stars(t.level + 1)}`, '20px', '#ffe066', true);
+      const fr = this.portrait(300, py, PW, PH, t.type, t.level + 1, 0xffe066, D);
       this.ptween({ targets: fr, alpha: 0.45, duration: 700, yoyo: true, repeat: -1 });      // золотая рамка мерцает
       // Что изменится: те же три характеристики и в том же порядке, что в витрине и карточке «i».
       // Новое значение: урон зелёный, дальность золотая (как круг на поле), скорость не меняется.
       const now = statRows(t.type, t.level), next = statRows(t.type, t.level + 1);
       now.forEach((r, i) => {
-        const y = 976 + i * 64, n = next[i];
-        txt(530, y, r.label, '17px', '#b9b2cc', false, 0);
-        const a = txt(530, y + 24, r.value === n.value ? r.value : r.value + ' → ', '22px', '#ffffff', true, 0);
-        if (r.value !== n.value) txt(530 + a.width, y + 24, n.value, '22px', r.id === 'range' ? '#ffe066' : '#7CFC8A', true, 0);
+        const y = 922 + i * 52, n = next[i];
+        txt(402, y, r.label, '16px', '#b9b2cc', false, 0);
+        const a = txt(402, y + 22, r.value === n.value ? r.value : r.value + ' → ', '22px', '#ffffff', true, 0);
+        if (r.value !== n.value) txt(402 + a.width, y + 22, n.value, '22px', r.id === 'range' ? '#ffe066' : '#7CFC8A', true, 0);
       });
       // «Эволюция» — большая, «Продать» — маленькая и в стороне, чтобы не нажать её случайно.
-      this.btn(250, 1228, 460, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
-      this.price(250, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
-      this.btn(612, 1232, 176, 60, '', 0xa33a3a, true, () => this.sell(t));
-      this.price(612, 1229, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
+      this.btn(240, 1130, 440, 70, '', 0x2e8b57, ok, () => this.upgrade(t));
+      this.price(240, 1127, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
+      this.btn(612, 1134, 176, 56, '', 0xa33a3a, true, () => this.sell(t));
+      this.price(612, 1131, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
     } else {
-      txt(480, 972, L('maxEvo'), '24px', '#ffe066', true);
+      txt(440, 924, L('maxEvo'), '22px', '#ffe066', true);
       statRows(t.type, t.level).forEach((r, i) => {
-        const y = 1024 + i * 46, a = txt(300, y, r.label + '  ', '21px', '#b9b2cc', false, 0);
-        txt(300 + a.width, y, r.value, '23px', '#ffffff', true, 0);
+        const y = 966 + i * 40, a = txt(260, y, r.label + '  ', '20px', '#b9b2cc', false, 0);
+        txt(260 + a.width, y, r.value, '23px', '#ffffff', true, 0);
       });
-      this.btn(612, 1232, 176, 60, '', 0xa33a3a, true, () => this.sell(t));
-      this.price(612, 1229, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
+      this.btn(612, 1134, 176, 56, '', 0xa33a3a, true, () => this.sell(t));
+      this.price(612, 1131, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
     }
   }
 
@@ -457,16 +480,16 @@ class GameScene extends Phaser.Scene {
   // иначе показывается картинка с «дыханием» и условным показом атаки.
   shop(slot) {
     const D = 22, add = o => { this.panelItems.push(o); return o; };
-    const T = 938, CH = 334;                                    // верх и высота карточек
-    add(UI.bar(this, W / 2, (928 + H) / 2, W, H - 928, 'top').setDepth(D - 1).setInteractive());
+    const T = PANEL_TOP + 8, CH = BAR_TOP - PANEL_TOP - 14;      // верх и высота карточек
+    add(UI.bar(this, W / 2, (PANEL_TOP + BAR_TOP) / 2, W, BAR_TOP - PANEL_TOP, 'top').setDepth(D - 1).setInteractive());
     TOWER_ORDER.forEach((type, i) => {
       const d = TOWERS[type], ok = this.gold >= d.cost, cx = 92 + i * 178.5, key = `t_${type}_1`;
-      const PW = 152, PH = 128;                                 // размер портрета
+      const PW = 134, PH = 112;                                 // размер портрета
       const card = add(UI.card(this, cx, T + CH / 2, 170, CH, ok ? d.color : 0x666666, !ok).setDepth(D).setInteractive());
       if (ok) card.on('pointerdown', () => this.build(slot, type));
 
       // Портрет
-      const py = T + 76, feet = T + 132;
+      const py = T + 62, feet = T + 110;
       add(this.add.rectangle(cx, py, PW, PH, 0x0e0e0e).setStrokeStyle(2, 0x000000).setDepth(D + 1));
       const cine = this.anims.exists('p_' + type);
       if (cine) {                                               // киношный портрет: ролик в рамке целиком
@@ -523,11 +546,11 @@ class GameScene extends Phaser.Scene {
 
       // Подписи и характеристики
       const txt = (y, str, size, color, bold) => add(this.add.text(cx, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setDepth(D + 5));
-      txt(T + 164, L('t_' + type), '25px', ok ? '#fff' : '#888', true);
-      txt(T + 190, L('d_' + type), '15px', ok ? '#bbb' : '#666');
-      statRows(type, 1).forEach((r, k) => txt(T + 214 + k * 21, r.label + ' ' + r.value, '15px', ok ? '#9fd3ff' : '#555'));
-      add(UI.plate(this, cx, T + 297, 156, 44, ok ? 0x2e8b57 : 0x5a2626).setDepth(D + 4));
-      this.price(cx, T + 296, ok ? L('summon') : L('need'), d.cost, D + 5, 19, ok ? '#fff' : '#b88', ok ? '#ffe066' : '#ff7777', !ok);
+      txt(T + 136, L('t_' + type), '23px', ok ? '#fff' : '#888', true);
+      txt(T + 158, L('d_' + type), '14px', ok ? '#bbb' : '#666');
+      statRows(type, 1).forEach((r, k) => txt(T + 179 + k * 19, r.label + ' ' + r.value, '14px', ok ? '#9fd3ff' : '#555'));
+      add(UI.plate(this, cx, T + CH - 22, 156, 36, ok ? 0x2e8b57 : 0x5a2626).setDepth(D + 4));
+      this.price(cx, T + CH - 23, ok ? L('summon') : L('need'), d.cost, D + 5, 19, ok ? '#fff' : '#b88', ok ? '#ffe066' : '#ff7777', !ok);
     });
   }
 
@@ -630,13 +653,13 @@ class GameScene extends Phaser.Scene {
 
   // Подсказка про способности: один раз за всю игру, в начале второй волны.
   showAbTip() {
-    const o = this.abTip = [], add = x => { o.push(x); return x; }, cx = W / 2, by = 965;
+    const o = this.abTip = [], add = x => { o.push(x); return x; }, cx = W / 2, by = 1080;
     const text = add(this.add.text(cx, by, L('tutAb'), { fontFamily: FONT, fontSize: '25px', color: '#2a1450', fontStyle: 'bold', align: 'center', lineSpacing: 6 }).setOrigin(0.5).setDepth(29));
     const skip = add(this.add.text(cx, by + text.height / 2 + 14, L('tutSkip'), { fontFamily: FONT, fontSize: '16px', color: '#7a6a9a' }).setOrigin(0.5).setDepth(29));
     const w = text.width + 44, h = text.height + 52, top = by - text.height / 2 - 16, g = add(this.add.graphics().setDepth(28));
     g.fillStyle(0x000000, 0.3); g.fillRoundedRect(cx - w / 2 + 3, top + 5, w, h, 16);
     g.fillStyle(0xfff3c4); g.fillRoundedRect(cx - w / 2, top, w, h, 16);
-    for (const tx of [185, 535]) g.fillTriangle(tx - 16, top + h - 1, tx + 16, top + h - 1, tx, top + h + 20);     // стрелки к обеим кнопкам
+    for (const tx of [122, 598]) g.fillTriangle(tx - 16, top + h - 1, tx + 16, top + h - 1, tx, top + h + 20);     // стрелки к обеим кнопкам
     g.lineStyle(3, 0x2a1450); g.strokeRoundedRect(cx - w / 2, top, w, h, 16);
     this.tweens.add({ targets: o, y: '-=8', duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     add(this.add.zone(cx, by + 8, w, h).setInteractive().setDepth(29)).on('pointerdown', () => this.hideAbTip());
@@ -845,7 +868,7 @@ class GameScene extends Phaser.Scene {
       Platform.gameplay(false);
       if (!this.endless && this.wave >= WAVES.length) { this.finish(true); return; }
     }
-    if (this.dirty) this.refresh();
+    if (this.dirty) this.refresh(); else this.refreshBar();   // кнопки способностей оживают, как только на поле появляются враги
   }
 }
 

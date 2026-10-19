@@ -3,6 +3,8 @@ const FONT = 'sans-serif';
 const W = 720, H = 1280;          // логический размер экрана (вертикальный)
 const ROAD_W = 70;
 const START_LIVES = 20;
+// Нижняя часть экрана в бою: полоса кнопок (метеор, волна, заморозка) от BAR_TOP до низа и панель витрины/стража над ней.
+const BAR_TOP = 1184, BAR_Y = 1232, PANEL_TOP = 900;
 const MAX_LEVEL = 3;
 const SELL_RATE = 0.6;            // доля возврата золота при продаже
 
