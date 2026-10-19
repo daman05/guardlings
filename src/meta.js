@@ -8,11 +8,14 @@ const UPGRADES = {
   gold:  { step: 15, color: 0xffc933 },   // стартовое золото
   lives: { step: 2,  color: 0xff4d4d },   // жизни портала
   dmg:   { step: 4,  color: 0x4fc36a },   // урон всех стражей, %
+  speed: { step: 4,  color: 0xf0c419 },   // скорость атаки всех стражей, %
   evo:   { step: 5,  color: 0xc05ae0 },   // скидка на эволюцию, %
   meteor: { step: 6, power: 10, color: 0xff7a1a },   // метеор: перезарядка −6 % и урон +10 % за уровень
   freeze: { step: 6, power: 0.3, color: 0x6fd3e8 }   // заморозка: перезарядка −6 % и +0,3 с заморозки за уровень
 };
-const UP_ORDER = ['gold', 'lives', 'dmg', 'evo', 'meteor', 'freeze'];
+const UP_ORDER = ['gold', 'lives', 'dmg', 'speed', 'evo', 'meteor', 'freeze'];
+// Иконки улучшений (урон и скорость — те же, что у характеристик стражей).
+const UP_ICON = { gold: '💰', lives: '❤️', dmg: '💥', speed: '⚡', evo: '⭐', meteor: '☄️', freeze: '❄️' };
 const UP_COST = [15, 25, 40, 60, 90];     // цена каждого следующего уровня в кристаллах
 
 // Награды кристаллами.
@@ -42,7 +45,7 @@ const Meta = {
 // Характеристики стража на стадии level (с учётом купленных улучшений).
 function guardStats(type, level) {
   const d = TOWERS[type], up = LEVEL_UP, n = level - 1, bonus = 1 + Meta.bonus('dmg') / 100;
-  return { dmg: d.dmg * Math.pow(up.dmg, n) * bonus, range: d.range * (1 + up.range * n), rate: d.rate / Math.pow(up.speed, n),
+  return { dmg: d.dmg * Math.pow(up.dmg, n) * bonus, range: d.range * (1 + up.range * n), rate: d.rate / Math.pow(up.speed, n) / (1 + Meta.bonus('speed') / 100),
            splash: d.splash || 0, slow: d.slow || 0, poison: (d.poison || 0) * Math.pow(up.poison, n) * bonus, ptime: d.ptime || 0 };
 }
 // Три характеристики стража в одном виде для всех экранов (витрина, эволюция, карточка «i», справочник):

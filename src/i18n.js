@@ -3,7 +3,7 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.22', loading: 'Loading…',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.23', loading: 'Loading…',
     languageLabel: 'Language', languageName: 'English',
     sfxOn: '♪  Sound: on', sfxOff: '♪  Sound: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
@@ -38,8 +38,8 @@ const STRINGS = {
     g_frost: 'Barely hurts but slows enemies. Place it next to strong guardians.',
     g_poison: 'Poison ignores armor and works on several enemies at once. Best against Shellbacks, Brutes and the Boss.',
     upgrades: 'Upgrades', upHint: 'Crystals come from cleared waves, new stars and endless mode', upMax: 'MAX',
-    up_gold: 'Starting gold', up_lives: 'Portal lives', up_dmg: 'Guardian damage', up_evo: 'Cheaper evolution', up_meteor: 'Meteor', up_freeze: 'Freeze',
-    upd_gold: 'Extra gold at the start: +{0}', upd_lives: 'Extra lives: +{0}', upd_dmg: 'Damage of all guardians: +{0}%', upd_evo: 'Evolution discount: {0}%', upd_meteor: 'Recharge −{0}%, damage +{1}%', upd_freeze: 'Recharge −{0}%, freeze +{1} s',
+    up_gold: 'Starting gold', up_lives: 'Portal lives', up_dmg: 'Guardian damage', up_speed: 'Attack speed', up_evo: 'Cheaper evolution', up_meteor: 'Meteor', up_freeze: 'Freeze',
+    upd_gold: 'Extra gold at the start: +{0}', upd_lives: 'Extra lives: +{0}', upd_dmg: 'Damage of all guardians: +{0}%', upd_speed: 'Attack speed of all guardians: +{0}%', upd_evo: 'Evolution discount: {0}%', upd_meteor: 'Recharge −{0}%, damage +{1}%', upd_freeze: 'Recharge −{0}%, freeze +{1} s',
     crystalsGot: '◆ +{0}', ab_meteor: 'Meteor', ab_freeze: 'Freeze', abAim: 'Tap the field',
     stageNow: '(now)', waveN: 'Wave {0}', stDmg: 'Damage', stPoison: 'Poison', stRange: 'Range', stSpeed: 'Speed', perSec: '{0}/s', modeNormal: 'Normal', modeHard: 'Hard', lockedHard: 'Locked.\nClear this map in normal mode first.',
     tutAb: 'In a tough spot use abilities:\n☄ Meteor — tap it, then tap the field\n❄ Freeze — stops every monster', adDouble: '▶ Double', adCrystals: '▶ Watch a video: ◆ +{0}',
@@ -47,7 +47,7 @@ const STRINGS = {
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.22', loading: 'Загрузка…',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.23', loading: 'Загрузка…',
     languageLabel: 'Язык', languageName: 'Русский',
     sfxOn: '♪  Звук: включён', sfxOff: '♪  Звук: выключен', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
@@ -82,8 +82,8 @@ const STRINGS = {
     g_frost: 'Почти не ранит, но замедляет. Ставьте рядом с сильными стражами.',
     g_poison: 'Яд не замечает броню и действует сразу на нескольких врагов. Лучший против Броненосцев, Громил и Босса.',
     upgrades: 'Улучшения', upHint: 'Кристаллы дают за пройденные волны, новые звёзды и бесконечный режим', upMax: 'МАКС',
-    up_gold: 'Стартовое золото', up_lives: 'Жизни портала', up_dmg: 'Урон стражей', up_evo: 'Дешёвая эволюция', up_meteor: 'Метеор', up_freeze: 'Заморозка',
-    upd_gold: 'Золото в начале карты: +{0}', upd_lives: 'Дополнительные жизни: +{0}', upd_dmg: 'Урон всех стражей: +{0}%', upd_evo: 'Скидка на эволюцию: {0}%', upd_meteor: 'Перезарядка −{0}%, урон +{1}%', upd_freeze: 'Перезарядка −{0}%, заморозка +{1} с',
+    up_gold: 'Стартовое золото', up_lives: 'Жизни портала', up_dmg: 'Урон стражей', up_speed: 'Скорость атаки', up_evo: 'Дешёвая эволюция', up_meteor: 'Метеор', up_freeze: 'Заморозка',
+    upd_gold: 'Золото в начале карты: +{0}', upd_lives: 'Дополнительные жизни: +{0}', upd_dmg: 'Урон всех стражей: +{0}%', upd_speed: 'Скорость атаки всех стражей: +{0}%', upd_evo: 'Скидка на эволюцию: {0}%', upd_meteor: 'Перезарядка −{0}%, урон +{1}%', upd_freeze: 'Перезарядка −{0}%, заморозка +{1} с',
     crystalsGot: '◆ +{0}', ab_meteor: 'Метеор', ab_freeze: 'Заморозка', abAim: 'Нажмите на поле',
     stageNow: '(сейчас)', waveN: 'Волна {0}', stDmg: 'Урон', stPoison: 'Яд', stRange: 'Дальность', stSpeed: 'Скорость', perSec: '{0}/с', modeNormal: 'Обычный', modeHard: 'Тяжёлый', lockedHard: 'Закрыта.\nСначала пройдите эту карту в обычном режиме.',
     tutAb: 'В трудный момент помогут способности:\n☄ Метеор — нажмите, затем на поле\n❄ Заморозка — останавливает всех', adDouble: '▶ Удвоить', adCrystals: '▶ Ролик за награду: ◆ +{0}',
