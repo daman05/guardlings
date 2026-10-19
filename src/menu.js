@@ -241,42 +241,74 @@ class MapScene extends Phaser.Scene {
   }
 }
 
+// Список, который листается пальцем (или колёсиком) между шапкой top и низом bottom.
+// items — объекты списка; state[key] хранит положение, чтобы после перезапуска сцены список не прыгал наверх.
+// Шапку и низ сцена рисует сама поверх (depth ≥ 10), закрывая уехавшие карточки.
+function scrollList(scene, items, top, bottom, contentBottom, state, key, bg) {
+  items.forEach(o => o.setData('y0', o.y));
+  const maxScroll = Math.max(0, contentBottom - bottom);
+  const bar = scene.add.rectangle(W - 8, 0, 6, 0, 0xffffff, 0.35).setOrigin(0.5, 0).setDepth(11);
+  const apply = v => {
+    state[key] = Phaser.Math.Clamp(v, 0, maxScroll);
+    items.forEach(o => { o.y = o.getData('y0') - state[key]; });
+    const vis = bottom - top, h = vis * vis / (vis + maxScroll);
+    bar.setVisible(maxScroll > 0).setSize(6, h); bar.y = top + (vis - h) * (maxScroll ? state[key] / maxScroll : 0);
+  };
+  apply(state[key] || 0);
+  let downY = 0, start = 0;
+  scene.input.on('pointerdown', p => { downY = p.y; start = state[key] || 0; scene.dragged = false; });
+  scene.input.on('pointermove', p => { if (!p.isDown) return; if (Math.abs(p.y - downY) > 10) scene.dragged = true; if (scene.dragged) apply(start - (p.y - downY)); });
+  scene.input.on('wheel', (p, objs, dx, dy) => apply((state[key] || 0) + dy * 0.6));
+  scene.add.rectangle(W / 2, top / 2, W, top, bg).setDepth(10).setInteractive();
+  scene.add.rectangle(W / 2, (bottom + H) / 2, W, H - bottom, bg).setDepth(10).setInteractive();
+}
+
 // Справочник: кто из диких монстров чем опасен и какой страж для чего нужен.
+// Карточки полного размера; если не влезают — список листается.
 class BookScene extends Phaser.Scene {
   constructor() { super('book'); }
   init(data) { this.tab = (data && data.tab) || 'enemies'; }
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
     Monsters.makeAll(this);
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
-    this.add.text(W / 2, 70, L('book'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-    const tabBtn = (x, id, label) => uiButton(this, x, 150, 330, 64, label, this.tab === id ? 0x2e6fd1 : 0x5a4f7a, () => { if (this.tab !== id) this.scene.restart({ tab: id }); }, 1, '26px');
-    tabBtn(W / 2 - 172, 'enemies', L('bookWild')); tabBtn(W / 2 + 172, 'towers', L('bookGuards'));
-    const txt = (x, y, str, size, color, bold) => this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal', wordWrap: { width: 690 - x }, lineSpacing: 3 }).setDepth(3);
+    const BG = 0x1b1530, TOP = 198, BOTTOM = 1170, items = [];
+    this.add.rectangle(W / 2, H / 2, W, H, BG);
+    const put = o => { items.push(o); return o; };
+    const txt = (x, y, str, size, color, bold) => put(this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal', wordWrap: { width: 690 - x }, lineSpacing: 4 }).setDepth(3));
+    let end = TOP;
     if (this.tab === 'enemies') {
+      const ROW = 170;
       Object.keys(ENEMIES).forEach((k, i) => {
-        const e = ENEMIES[k], y = 262 + i * 131;
-        UI.card(this, W / 2, y, 690, 122, e.color);
-        this.add.image(82, y, 'e_' + k).setDisplaySize(100, 100).setDepth(3);
-        txt(150, y - 53, L('e_' + k), '25px', '#ffe066', true);
-        this.add.text(676, y - 40, L('bkEnemy', e.hp, e.speed, e.gold), { fontFamily: FONT, fontSize: '17px', color: '#9fd3ff' }).setOrigin(1, 0.5).setDepth(3);
-        txt(150, y - 20, L('b_' + k), '19px', '#e8e4f2');
+        const e = ENEMIES[k], y = TOP + 14 + 80 + i * ROW;
+        put(UI.card(this, W / 2, y, 690, 160, e.color));
+        put(this.add.image(92, y, 'e_' + k).setDisplaySize(124, 124).setDepth(3));
+        txt(170, y - 66, L('e_' + k), '29px', '#ffe066', true);
+        txt(170, y - 26, L('bkEnemy', e.hp, e.speed, e.gold), '19px', '#9fd3ff');
+        txt(170, y + 4, L('b_' + k), '21px', '#e8e4f2');
+        end = y + 80 + 14;
       });
     } else {
+      const ROW = 244;
       TOWER_ORDER.forEach((k, i) => {
-        const d = TOWERS[k], y = 310 + i * 214;
-        UI.card(this, W / 2, y, 690, 202, d.color);
+        const d = TOWERS[k], y = TOP + 14 + 117 + i * ROW;
+        put(UI.card(this, W / 2, y, 690, 234, d.color));
         // три стадии: одинаковые промежутки между картинками, все стоят на одной линии
-        for (let l = 1, x = 22; l <= MAX_LEVEL; l++) { const sz = 56 + l * 10; this.add.image(x + sz / 2, y + 78, `t_${k}_${l}`).setOrigin(0.5, 1).setDisplaySize(sz, sz).setDepth(3); x += sz - 4; }
-        txt(30, y - 92, L('t_' + k), '27px', '#ffe066', true);
-        this.add.text(676, y - 76, L('bkCost', d.cost), { fontFamily: FONT, fontSize: '20px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(3);
-        txt(250, y - 50, statRows(k, 1).map(r => r.label + ' ' + r.value).join('   ·   '), '17px', '#9fd3ff');
-        txt(250, y + 6, L('g_' + k), '19px', '#e8e4f2');
+        for (let l = 1, x = 22; l <= MAX_LEVEL; l++) { const sz = 56 + l * 10; put(this.add.image(x + sz / 2, y + 92, `t_${k}_${l}`).setOrigin(0.5, 1).setDisplaySize(sz, sz).setDepth(3)); x += sz - 4; }
+        txt(30, y - 104, L('t_' + k), '29px', '#ffe066', true);
+        put(this.add.text(676, y - 86, L('bkCost', d.cost), { fontFamily: FONT, fontSize: '22px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(3));
+        txt(250, y - 56, statRows(k, 1).map(r => r.label + ' ' + r.value).join('\n'), '19px', '#9fd3ff');
+        txt(250, y + 26, L('g_' + k), '20px', '#e8e4f2');
+        end = y + 117 + 14;
       });
     }
-    uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '32px');
+    scrollList(this, items, TOP, BOTTOM, end, BookScene.scroll, this.tab, BG);
+    this.add.text(W / 2, 70, L('book'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(11);
+    const tabBtn = (x, id, label) => uiButton(this, x, 150, 330, 64, label, this.tab === id ? 0x2e6fd1 : 0x5a4f7a, () => { if (this.tab !== id) this.scene.restart({ tab: id }); }, 11, '26px');
+    tabBtn(W / 2 - 172, 'enemies', L('bookWild')); tabBtn(W / 2 + 172, 'towers', L('bookGuards'));
+    uiButton(this, W / 2, 1220, 360, 76, L('back'), 0x5a4f7a, () => { BookScene.scroll = {}; this.scene.start('menu'); }, 11, '32px');
   }
 }
+BookScene.scroll = {};
 
 // Постоянные улучшения за кристаллы (кнопка «Улучшения» в главном меню).
 class UpgradeScene extends Phaser.Scene {
