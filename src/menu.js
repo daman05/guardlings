@@ -165,7 +165,7 @@ class MenuScene extends Phaser.Scene {
     uiButton(this, W / 2, row(0), 460, MB_H, '▶ ' + L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px');
     uiButton(this, W / 2 - 118, row(1), 224, MB_H, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
     uiButton(this, W / 2 + 118, row(1), 224, MB_H, '📖 ' + L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
-    uiButton(this, W / 2, row(2), 460, MB_H, `⬆ ${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
+    uiButton(this, W / 2, row(2), 460, MB_H, `💪 ${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
     if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, row(2), 460, MB_H, 3);   // есть на что потратить кристаллы
     const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
     let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
