@@ -173,7 +173,11 @@ class MenuScene extends Phaser.Scene {
     // Кнопки меню: одинаковая высота (MB_H) и одинаковые промежутки (MB_GAP) между рядами.
     const MB_H = 84, MB_GAP = 20, row = k => 1076 - MENU_LIFT + k * (MB_H + MB_GAP);
     // Значок слева от надписи, отдельным объектом: так его размер одинаковый на всех кнопках меню.
-    const withIcon = (txt, icon, gap = 12) => { const w = icon.displayWidth + gap; txt.x += w / 2; icon.setPosition(txt.x - txt.width / 2 - w / 2, txt.y).setDepth(txt.depth); };
+    const withIcon = (txt, icon, gap = 12) => {
+      const w = icon.displayWidth + gap; txt.x += w / 2; icon.setPosition(txt.x - txt.width / 2 - w / 2, txt.y).setDepth(txt.depth + 0.1);
+      // тень под значком-картинкой — такая же, как у надписей на кнопках
+      if (icon.type === 'Image') this.add.image(icon.x, icon.y + 2, icon.texture.key).setTintFill(0x000000).setAlpha(0.55).setDepth(txt.depth);
+    };
     withIcon(uiButton(this, W / 2, row(0), 460, MB_H, L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px')[1],
       this.add.text(0, 0, '▶', { fontFamily: FONT, fontSize: '27px', color: '#ffffff' }).setOrigin(0.5).setShadow(0, 2, 'rgba(0,0,0,0.6)', 3), 22);
     uiButton(this, W / 2 - 118, row(1), 224, MB_H, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
