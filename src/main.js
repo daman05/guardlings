@@ -374,6 +374,22 @@ class GameScene extends Phaser.Scene {
     return add(this.add.rectangle(x, y, w, h).setStrokeStyle(4, frame).setDepth(depth + 2));
   }
 
+  // Карточка стража: кто он, что умеет и чем хорош — напоминание, как при покупке.
+  guardInfo(t) {
+    const o = [], D = 40, add = x => { o.push(x); return x; }, d = TOWERS[t.type], st = this.stats(t);
+    const close = () => o.forEach(x => x.destroy());
+    add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setDepth(D).setInteractive()).on('pointerdown', close);
+    add(UI.card(this, W / 2, 560, 620, 700, d.color).setDepth(D + 1).setInteractive());
+    const tx = (y, s, size, color, bold) => add(this.add.text(W / 2, y, s, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal', align: 'center', wordWrap: { width: 540 }, lineSpacing: 6 }).setOrigin(0.5).setDepth(D + 2));
+    tx(262, `${L('t_' + t.type)}  ${'★'.repeat(t.level)}`, '40px', '#ffe066', true);
+    tx(310, L('d_' + t.type), '24px', '#e8e4f2');
+    // три стадии в ряд с равными промежутками, нынешняя ярче
+    for (let l = 1; l <= MAX_LEVEL; l++) add(this.add.image(W / 2 + (l - 2) * 170, 470, `t_${t.type}_${l}`).setOrigin(0.5, 1).setDisplaySize(110 + l * 16, 110 + l * 16).setAlpha(l === t.level ? 1 : 0.45).setDepth(D + 2));
+    tx(530, `${d.poison ? L('poisonN', Math.round(st.poison)) : L('damageN', Math.round(st.dmg))}    ${L('rangeN', Math.round(st.range))}\n${L('aps', (1 / st.rate).toFixed(1))}`, '24px', '#9fd3ff');
+    tx(660, L('g_' + t.type), '25px', '#ffffff');
+    UI.button(this, W / 2, 840, 300, 80, L('close'), 0x2e6fd1, close, { depth: D + 2, size: '32px' }).forEach(x => o.push(x));
+  }
+
   evoPanel(t) {
     const D = 22, add = o => { this.panelItems.push(o); return o; }, d = TOWERS[t.type];
     const txt = (x, y, str, size, color, bold, ox = 0.5) => add(this.add.text(x, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(ox, 0.5).setDepth(D + 5));
@@ -383,6 +399,9 @@ class GameScene extends Phaser.Scene {
 
     txt(134, 952, `${L('t_' + t.type)}  ${stars(t.level)}`, '22px', '#ffffff', true);
     this.portrait(134, py, PW, PH, t.type, t.level, d.color, D);
+    // Кто это и что умеет: кнопка «i» поверх портрета открывает карточку стража (как в справочнике).
+    const [ib, it] = UI.button(this, 134 + PW / 2 - 24, py - PH / 2 + 24, 40, 40, 'i', 0x2e6fd1, () => this.guardInfo(t), { depth: D + 4, size: '24px' });
+    this.panelItems.push(ib, it);
 
     if (!max) {
       const c = this.upgradeCost(t), ok = this.gold >= c;

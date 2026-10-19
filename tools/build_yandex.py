@@ -63,9 +63,13 @@ def main():
     used = set(re.findall(r"assets/audio/[\w.\-]+", open(os.path.join(ROOT, 'src', 'audio.js'), encoding='utf-8').read()))
     missing = [u for u in used if not os.path.exists(os.path.join(OUT, u))]
     z = os.path.join(ROOT, 'dist', 'guardlings-yandex.zip')
+    # в архив только то, что положили сейчас (в папке могли остаться старые файлы, если удалять их нельзя)
+    keep = set(FIRST + SCRIPTS + ['index.html'] + ['assets/audio/' + a for a in AUDIO]
+               + ['assets/img/' + f for f in os.listdir(os.path.join(ROOT, 'assets', 'img'))]
+               + ['assets/' + f for f in os.listdir(os.path.join(ROOT, 'assets')) if f.startswith('icon-')])
+    total = sum(os.path.getsize(os.path.join(OUT, f)) for f in keep)
     with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for d, _, fs in os.walk(OUT):
-            for f in fs: p = os.path.join(d, f); zf.write(p, os.path.relpath(p, OUT))
+        for f in sorted(keep): zf.write(os.path.join(OUT, f), f)
     print('файлов на %.1f МБ (лимит 100), архив %.1f МБ' % (total / 1e6, os.path.getsize(z) / 1e6))
     print('плохие имена:', bad or 'нет', '| не хватает музыки:', missing or 'нет')
 
