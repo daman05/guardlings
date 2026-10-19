@@ -670,14 +670,14 @@ class GameScene extends Phaser.Scene {
   }
 
   // ---------- способности игрока ----------
-  abilityCd(id) { return ABILITIES[id].cd * (1 - Meta.bonus('cd') / 100); }
+  abilityCd(id) { return ABILITIES[id].cd * (1 - Meta.bonus(id) / 100); }
 
   // Метеор: падает в точку и бьёт всех в радиусе мимо брони.
   meteor(x, y) {
     const a = ABILITIES.meteor;
     this.hideAbTip();
     this.aim = false; this.aimGfx.setVisible(false); this.cd.meteor = this.abilityCd('meteor'); this.panelKey = null; this.refresh();
-    const dmg = a.dmg * (1 + BAL.hpGrowth * (Math.max(1, this.wave) - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (HARD ? HARD_MODE.hp : 1);
+    const dmg = a.dmg * (1 + BAL.hpGrowth * (Math.max(1, this.wave) - 1)) * (MAPS[MAP_INDEX].hpMul || 1) * (HARD ? HARD_MODE.hp : 1) * (1 + Meta.power('meteor') / 100);
     const rock = this.add.circle(x + 260, y - 620, 26, 0xff7a1a).setStrokeStyle(5, 0x5a1c00).setDepth(17);
     const tail = this.add.triangle(0, 0, 0, 0, 34, 12, 120, -280, 0xffc04a, 0.7).setDepth(16).setPosition(x + 260, y - 620);
     this.tweens.add({ targets: [rock, tail], x, y, duration: 380, ease: 'Quad.easeIn', onComplete: () => {
@@ -700,7 +700,8 @@ class GameScene extends Phaser.Scene {
     const a = ABILITIES.freeze;
     this.hideAbTip();
     this.cd.freeze = this.abilityCd('freeze'); this.panelKey = null;
-    for (const e of this.enemies) if (!e.dead) e.frozen = e.boss ? a.bossTime : a.time;
+    const extra = Meta.power('freeze');             // прокачка: +0,3 с за уровень (босс — вдвое меньше)
+    for (const e of this.enemies) if (!e.dead) e.frozen = e.boss ? a.bossTime + extra / 2 : a.time + extra;
     Sfx.play('frost'); Sfx.play('evolve');
     const veil = this.add.rectangle(W / 2, 585, W, 990, 0xbfefff, 0.45).setDepth(15);
     this.tweens.add({ targets: veil, alpha: 0, duration: 600, onComplete: () => veil.destroy() });

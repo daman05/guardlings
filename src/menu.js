@@ -267,14 +267,15 @@ class UpgradeScene extends Phaser.Scene {
     this.add.text(W / 2, 138, `◆ ${Meta.crystals}`, { fontFamily: FONT, fontSize: '44px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5);
     this.add.text(W / 2, 190, L('upHint'), { fontFamily: FONT, fontSize: '19px', color: '#b9b2cc', align: 'center' }).setOrigin(0.5);
     UP_ORDER.forEach((id, i) => {
-      const u = UPGRADES[id], y = 310 + i * 168, lvl = Meta.level(id), max = Meta.maxed(id), ok = !max && Meta.crystals >= Meta.cost(id);
-      UI.card(this, W / 2, y, 690, 156, u.color);
-      this.add.text(34, y - 56, L('up_' + id), { fontFamily: FONT, fontSize: '27px', color: '#ffe066', fontStyle: 'bold' }).setDepth(3);
-      const now = lvl * u.step, next = (lvl + 1) * u.step;
-      this.add.text(34, y - 16, max ? L('upd_' + id, now) : L('upd_' + id, now) + '  →  ' + next, { fontFamily: FONT, fontSize: '21px', color: '#e8e4f2' }).setDepth(3);
-      for (let k = 0; k < UP_COST.length; k++) this.add.rectangle(46 + k * 44, y + 44, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3);
-      if (max) this.add.text(566, y + 6, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
-      else UI.button(this, 566, y + 6, 196, 76, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
+      const u = UPGRADES[id], y = 290 + i * 150, lvl = Meta.level(id), max = Meta.maxed(id), ok = !max && Meta.crystals >= Meta.cost(id);
+      UI.card(this, W / 2, y, 690, 140, u.color);
+      this.add.text(34, y - 58, L('up_' + id), { fontFamily: FONT, fontSize: '27px', color: '#ffe066', fontStyle: 'bold' }).setDepth(3);
+      // сейчас и (зелёным) — что даст следующий уровень
+      this.add.text(34, y - 18, upgradeText(id, lvl), { fontFamily: FONT, fontSize: '20px', color: '#e8e4f2' }).setDepth(3);
+      if (!max) this.add.text(34, y + 10, '→ ' + upgradeText(id, lvl + 1), { fontFamily: FONT, fontSize: '18px', color: '#7CFC8A' }).setDepth(3);
+      for (let k = 0; k < UP_COST.length; k++) this.add.rectangle(46 + k * 44, y + 46, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3);
+      if (max) this.add.text(566, y + 4, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
+      else UI.button(this, 566, y + 4, 196, 70, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
     });
     // Кристаллы за просмотр ролика — только там, где площадка умеет показывать рекламу за награду.
     if (Platform.ads.rewarded) uiButton(this, W / 2, 1150, 460, 64, L('adCrystals', REWARD.ad), 0x8a5a2e, () => Platform.ads.showRewarded().then(ok => { if (ok) { Meta.add(REWARD.ad); Sfx.play('evolve'); } this.scene.restart(); }), 1, '26px');

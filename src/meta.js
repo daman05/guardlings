@@ -1,15 +1,18 @@
 // То, что остаётся у игрока между забегами: звёзды за карты, кристаллы и купленные за них улучшения.
 // Цифры улучшений и наград — здесь же.
 
-// Улучшения: step — прибавка за уровень (для evo, dmg, cd — в процентах), всего UP_COST.length уровней.
+// Улучшения: step — прибавка за уровень (для evo, dmg и способностей — в процентах), всего UP_COST.length уровней.
+// Способности прокачиваются отдельно: у метеора step — ускорение перезарядки (%), power — прибавка урона (%) за уровень;
+// у заморозки step — ускорение перезарядки (%), power — прибавка времени заморозки (с) за уровень.
 const UPGRADES = {
   gold:  { step: 15, color: 0xffc933 },   // стартовое золото
   lives: { step: 2,  color: 0xff4d4d },   // жизни портала
   dmg:   { step: 4,  color: 0x4fc36a },   // урон всех стражей, %
   evo:   { step: 5,  color: 0xc05ae0 },   // скидка на эволюцию, %
-  cd:    { step: 6,  color: 0x6fd3e8 }    // перезарядка способностей быстрее, %
+  meteor: { step: 6, power: 10, color: 0xff7a1a },   // метеор: перезарядка −6 % и урон +10 % за уровень
+  freeze: { step: 6, power: 0.3, color: 0x6fd3e8 }   // заморозка: перезарядка −6 % и +0,3 с заморозки за уровень
 };
-const UP_ORDER = ['gold', 'lives', 'dmg', 'evo', 'cd'];
+const UP_ORDER = ['gold', 'lives', 'dmg', 'evo', 'meteor', 'freeze'];
 const UP_COST = [15, 25, 40, 60, 90];     // цена каждого следующего уровня в кристаллах
 
 // Награды кристаллами.
@@ -22,6 +25,7 @@ const Meta = {
   add(n) { Platform.storage.set('crystals', this.crystals + n); },
   level(id) { return Platform.storage.get('up_' + id, 0); },
   bonus(id) { return this.level(id) * UPGRADES[id].step; },
+  power(id) { return this.level(id) * (UPGRADES[id].power || 0); },
   maxed(id) { return this.level(id) >= UP_COST.length; },
   cost(id) { return UP_COST[this.level(id)]; },
   buy(id) {
@@ -55,3 +59,17 @@ function statRows(type, level) {
 }
 // Строка «Урон 12 · Дальность 170 · Скорость 2.2/с».
 function statLine(type, level) { return statRows(type, level).map(r => r.label + ' ' + r.value).join('   '); }
+
+// Раньше было общее улучшение «Быстрые способности» (up_cd). Его уровни переходят в оба новых, чтобы прокачка не пропала.
+(function migrate() {
+  const old = Platform.storage.get('up_cd', 0);
+  if (!old) return;
+  for (const id of ['meteor', 'freeze']) Platform.storage.set('up_' + id, Math.max(Platform.storage.get('up_' + id, 0), old));
+  Platform.storage.set('up_cd', 0);
+})();
+// Текст улучшения на уровне lvl («Золото в начале карты: +30», «Перезарядка −12 %, урон +20 %»).
+function upgradeText(id, lvl) {
+  const u = UPGRADES[id], s = Math.round(lvl * u.step * 10) / 10, p = Math.round(lvl * (u.power || 0) * 10) / 10;
+  const num = v => LANG === 'ru' ? String(v).replace('.', ',') : String(v);
+  return L('upd_' + id, num(s), num(p));
+}
