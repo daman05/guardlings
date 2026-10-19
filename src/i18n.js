@@ -3,7 +3,7 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.15', loading: 'Loading…',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.16', loading: 'Loading…',
     languageLabel: 'Language', languageName: 'English',
     sfxOn: '♪  Sound: on', sfxOff: '♪  Sound: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
@@ -11,7 +11,7 @@ const STRINGS = {
     portal: 'PORTAL', wave: 'Wave {0}/{1}', hint: 'Tap a spot to summon a guardian',
     waveGoing: '⚔ Wave {0} of {1} in progress', startWave: '⚔ Start wave {0}', waveDone: 'Wave cleared!  +{0}',
     summon: 'Summon', need: 'Need', shopStats: 'Damage {0}   Range {1}', aps: 'Attacks per second: {0}',
-    evolution: 'Evolution', evolve: 'Evolve', release: 'Release', maxEvo: 'Fully evolved',
+    evolution: 'Evolution', evolve: 'Evolve', release: 'Sell', maxEvo: 'Fully evolved',
     damage: 'Damage', range: 'Range', damageN: 'Damage {0}', rangeN: 'Range {0}',
     win: 'VICTORY!', lose: 'PORTAL LOST', result: 'Waves cleared: {0}\nBest: {1}',
     nextMap: 'Next map', retry: 'Restart', toMenu: 'Menu', pause: 'PAUSED', pauseInfo: '{0} · wave {1} of {2}', resume: 'Resume',
@@ -47,7 +47,7 @@ const STRINGS = {
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.15', loading: 'Загрузка…',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.16', loading: 'Загрузка…',
     languageLabel: 'Язык', languageName: 'Русский',
     sfxOn: '♪  Звук: включён', sfxOff: '♪  Звук: выключен', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
@@ -55,7 +55,7 @@ const STRINGS = {
     portal: 'ПОРТАЛ', wave: 'Волна {0}/{1}', hint: 'Нажмите на площадку, чтобы призвать стража',
     waveGoing: '⚔ Идёт волна {0} из {1}', startWave: '⚔ Начать волну {0}', waveDone: 'Волна пройдена!  +{0}',
     summon: 'Призвать', need: 'Нужно', shopStats: 'Урон {0}   Дальность {1}', aps: 'Атак в секунду: {0}',
-    evolution: 'Эволюция', evolve: 'Эволюция', release: 'Отпустить', maxEvo: 'Максимальная эволюция',
+    evolution: 'Эволюция', evolve: 'Эволюция', release: 'Продать', maxEvo: 'Максимальная эволюция',
     damage: 'Урон', range: 'Дальность', damageN: 'Урон {0}', rangeN: 'Дальность {0}',
     win: 'ПОБЕДА!', lose: 'ПОРТАЛ ЗАХВАЧЕН', result: 'Пройдено волн: {0}\nРекорд: {1}',
     nextMap: 'Следующая карта', retry: 'Заново', toMenu: 'В меню', pause: 'ПАУЗА', pauseInfo: '{0} · волна {1} из {2}', resume: 'Продолжить',

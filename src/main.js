@@ -427,18 +427,19 @@ class GameScene extends Phaser.Scene {
         const a = txt(530, y + 24, r.value === n.value ? r.value : r.value + ' → ', '22px', '#ffffff', true, 0);
         if (r.value !== n.value) txt(530 + a.width, y + 24, n.value, '22px', r.id === 'range' ? '#ffe066' : '#7CFC8A', true, 0);
       });
-      this.btn(190, 1228, 340, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
-      this.price(190, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
-      this.btn(540, 1228, 320, 80, '', 0xa33a3a, true, () => this.sell(t));
-      this.price(540, 1225, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 26, '#fff', '#ffe066');
+      // «Эволюция» — большая, «Продать» — маленькая и в стороне, чтобы не нажать её случайно.
+      this.btn(250, 1228, 460, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
+      this.price(250, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
+      this.btn(612, 1232, 176, 60, '', 0xa33a3a, true, () => this.sell(t));
+      this.price(612, 1229, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
     } else {
       txt(480, 972, L('maxEvo'), '24px', '#ffe066', true);
       statRows(t.type, t.level).forEach((r, i) => {
         const y = 1024 + i * 46, a = txt(300, y, r.label + '  ', '21px', '#b9b2cc', false, 0);
         txt(300 + a.width, y, r.value, '23px', '#ffffff', true, 0);
       });
-      this.btn(W / 2, 1228, 680, 80, '', 0xa33a3a, true, () => this.sell(t));
-      this.price(W / 2, 1225, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 26, '#fff', '#ffe066');
+      this.btn(612, 1232, 176, 60, '', 0xa33a3a, true, () => this.sell(t));
+      this.price(612, 1229, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');
     }
   }
 
