@@ -3,7 +3,7 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.10', loading: 'Loading…',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.11', loading: 'Loading…',
     languageLabel: 'Language', languageName: 'English',
     sfxOn: '♪  Sound: on', sfxOff: '♪  Sound: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
@@ -41,13 +41,13 @@ const STRINGS = {
     up_gold: 'Starting gold', up_lives: 'Portal lives', up_dmg: 'Guardian damage', up_evo: 'Cheaper evolution', up_cd: 'Faster abilities',
     upd_gold: 'Extra gold at the start: +{0}', upd_lives: 'Extra lives: +{0}', upd_dmg: 'Damage of all guardians: +{0}%', upd_evo: 'Evolution discount: {0}%', upd_cd: 'Abilities recharge faster: {0}%',
     crystalsGot: '◆ +{0}', ab_meteor: 'Meteor', ab_freeze: 'Freeze', abAim: 'Tap the field',
-    modeNormal: 'Normal', modeHard: 'Hard', lockedHard: 'Locked.\nClear this map in normal mode first.',
+    stageNow: '(now)', modeNormal: 'Normal', modeHard: 'Hard', lockedHard: 'Locked.\nClear this map in normal mode first.',
     tutAb: 'In a tough spot use abilities:\n☄ Meteor — tap it, then tap the field\n❄ Freeze — stops every monster', adDouble: '▶ Double', adCrystals: '▶ Watch a video: ◆ +{0}',
     tut1: 'Tap the glowing spot\nto place a guardian', tut2: 'Pick a guardian.\nSpitty is cheap and shoots fast',
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.10', loading: 'Загрузка…',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.11', loading: 'Загрузка…',
     languageLabel: 'Язык', languageName: 'Русский',
     sfxOn: '♪  Звук: включён', sfxOff: '♪  Звук: выключен', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
@@ -85,7 +85,7 @@ const STRINGS = {
     up_gold: 'Стартовое золото', up_lives: 'Жизни портала', up_dmg: 'Урон стражей', up_evo: 'Дешёвая эволюция', up_cd: 'Быстрые способности',
     upd_gold: 'Золото в начале карты: +{0}', upd_lives: 'Дополнительные жизни: +{0}', upd_dmg: 'Урон всех стражей: +{0}%', upd_evo: 'Скидка на эволюцию: {0}%', upd_cd: 'Способности перезаряжаются быстрее: {0}%',
     crystalsGot: '◆ +{0}', ab_meteor: 'Метеор', ab_freeze: 'Заморозка', abAim: 'Нажмите на поле',
-    modeNormal: 'Обычный', modeHard: 'Тяжёлый', lockedHard: 'Закрыта.\nСначала пройдите эту карту в обычном режиме.',
+    stageNow: '(сейчас)', modeNormal: 'Обычный', modeHard: 'Тяжёлый', lockedHard: 'Закрыта.\nСначала пройдите эту карту в обычном режиме.',
     tutAb: 'В трудный момент помогут способности:\n☄ Метеор — нажмите, затем на поле\n❄ Заморозка — останавливает всех', adDouble: '▶ Удвоить', adCrystals: '▶ Ролик за награду: ◆ +{0}',
     tut1: 'Нажмите на светящуюся площадку,\nчтобы поставить стража', tut2: 'Выберите стража.\nПлевун дешёвый и быстро стреляет',
     tut3: 'Теперь запустите волну.\nНе дайте монстрам дойти до портала!', tut4: 'Вы заработали золото!\nНажмите на стража, чтобы он эволюционировал', tutSkip: 'нажмите, чтобы скрыть'

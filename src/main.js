@@ -383,19 +383,26 @@ class GameScene extends Phaser.Scene {
   }
 
   // Карточка стража: кто он, что умеет и чем хорош — напоминание, как при покупке.
-  guardInfo(t) {
-    const o = [], D = 40, add = x => { o.push(x); return x; }, d = TOWERS[t.type], st = this.stats(t);
+  // Нажатие на любую из трёх стадий показывает её характеристики; выбранная стадия подсвечена.
+  guardInfo(t, lvl = t.level) {
+    const o = [], D = 40, add = x => { o.push(x); return x; }, d = TOWERS[t.type], st = this.stats({ type: t.type, level: lvl });
     const close = () => o.forEach(x => x.destroy());
     add(this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setDepth(D).setInteractive()).on('pointerdown', close);
-    add(UI.card(this, W / 2, 560, 620, 700, d.color).setDepth(D + 1).setInteractive());
+    add(UI.card(this, W / 2, 570, 620, 720, d.color).setDepth(D + 1).setInteractive());
     const tx = (y, s, size, color, bold) => add(this.add.text(W / 2, y, s, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal', align: 'center', wordWrap: { width: 540 }, lineSpacing: 6 }).setOrigin(0.5).setDepth(D + 2));
-    tx(262, `${L('t_' + t.type)}  ${'★'.repeat(t.level)}`, '40px', '#ffe066', true);
+    tx(262, `${L('t_' + t.type)}  ${'★'.repeat(lvl)}`, '40px', '#ffe066', true);
     tx(310, L('d_' + t.type), '24px', '#e8e4f2');
-    // три стадии в ряд с равными промежутками, нынешняя ярче
-    for (let l = 1; l <= MAX_LEVEL; l++) add(this.add.image(W / 2 + (l - 2) * 170, 470, `t_${t.type}_${l}`).setOrigin(0.5, 1).setDisplaySize(110 + l * 16, 110 + l * 16).setAlpha(l === t.level ? 1 : 0.45).setDepth(D + 2));
-    tx(530, `${d.poison ? L('poisonN', Math.round(st.poison)) : L('damageN', Math.round(st.dmg))}    ${L('rangeN', Math.round(st.range))}\n${L('aps', (1 / st.rate).toFixed(1))}`, '24px', '#9fd3ff');
-    tx(660, L('g_' + t.type), '25px', '#ffffff');
-    UI.button(this, W / 2, 840, 300, 80, L('close'), 0x2e6fd1, close, { depth: D + 2, size: '32px' }).forEach(x => o.push(x));
+    // три стадии в ряд с равными промежутками
+    for (let l = 1; l <= MAX_LEVEL; l++) {
+      const x = W / 2 + (l - 2) * 170, on = l === lvl;
+      const plate = add(this.add.rectangle(x, 420, 156, 176, on ? d.color : 0x000000, on ? 0.3 : 0.18).setStrokeStyle(on ? 5 : 2, on ? 0xffe066 : 0x6a6480).setDepth(D + 2).setInteractive());
+      add(this.add.image(x, 492, `t_${t.type}_${l}`).setOrigin(0.5, 1).setDisplaySize(104 + l * 14, 104 + l * 14).setAlpha(on ? 1 : 0.5).setDepth(D + 3));
+      add(this.add.text(x, 524, '★'.repeat(l) + (l === t.level ? '  ' + L('stageNow') : ''), { fontFamily: FONT, fontSize: '18px', color: on ? '#ffe066' : '#9a93b0', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 3));
+      if (!on) plate.on('pointerdown', () => { Sfx.play('tap'); close(); this.guardInfo(t, l); });
+    }
+    tx(596, `${d.poison ? L('poisonN', Math.round(st.poison)) : L('damageN', Math.round(st.dmg))}    ${L('rangeN', Math.round(st.range))}\n${L('aps', (1 / st.rate).toFixed(1))}`, '24px', '#9fd3ff');
+    tx(720, L('g_' + t.type), '25px', '#ffffff');
+    UI.button(this, W / 2, 864, 300, 80, L('close'), 0x2e6fd1, close, { depth: D + 2, size: '32px' }).forEach(x => o.push(x));
   }
 
   evoPanel(t) {

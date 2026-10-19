@@ -164,7 +164,7 @@ class MenuScene extends Phaser.Scene {
     uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '27px');
     uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
     uiButton(this, W / 2, 1272 - MENU_LIFT, 460, 70, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
-    const ver = this.add.text(W - 14, 1262, L('version') + (/^\d{14}$/.test(window.BUILD || '') ? ` (${BUILD.slice(6, 8)}.${BUILD.slice(4, 6)} ${BUILD.slice(8, 10)}:${BUILD.slice(10, 12)})` : '') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
+    const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
     let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
     this.add.zone(W - 90, 1250, 180, 60).setInteractive().on('pointerdown', () => {
       const now = Date.now(); taps = now - last < 600 ? taps + 1 : 1; last = now;
