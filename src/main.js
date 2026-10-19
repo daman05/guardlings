@@ -392,8 +392,8 @@ class GameScene extends Phaser.Scene {
       add(this.add.text(x, 524, '★'.repeat(l) + (l === t.level ? '  ' + L('stageNow') : ''), { fontFamily: FONT, fontSize: '18px', color: on ? '#ffe066' : '#9a93b0', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 3));
       if (!on) plate.on('pointerdown', () => { Sfx.play('tap'); close(); this.guardInfo(t, l); });
     }
-    tx(590, statLine(t.type, lvl), '23px', '#9fd3ff', true);
-    tx(720, L('g_' + t.type), '25px', '#ffffff');
+    tx(612, statRows(t.type, lvl).map(r => r.label + '  ' + r.value).join('\n'), '24px', '#9fd3ff', true);   // каждая характеристика с новой строки
+    tx(746, L('g_' + t.type), '23px', '#ffffff');
     UI.button(this, W / 2, 864, 300, 80, L('close'), 0x2e6fd1, close, { depth: D + 2, size: '32px' }).forEach(x => o.push(x));
   }
 

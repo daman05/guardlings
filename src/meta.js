@@ -43,13 +43,15 @@ function guardStats(type, level) {
 }
 // Три характеристики стража в одном виде для всех экранов (витрина, эволюция, карточка «i», справочник):
 // всегда в этом порядке — урон (у Ядозуба яд), дальность, скорость атаки.
+// Иконки характеристик (эмодзи — на телефонах они цветные).
+const STAT_ICON = { dmg: '💥', poison: '🧪', range: '🎯', speed: '⚡' };
 function statRows(type, level) {
   const s = guardStats(type, level), p = !!TOWERS[type].poison;
   return [
-    { id: 'dmg', label: L(p ? 'stPoison' : 'stDmg'), value: p ? L('perSec', Math.round(s.poison)) : String(Math.round(s.dmg)) },
-    { id: 'range', label: L('stRange'), value: String(Math.round(s.range)) },
-    { id: 'speed', label: L('stSpeed'), value: L('perSec', (1 / s.rate).toFixed(1)) }
+    { id: 'dmg', label: STAT_ICON[p ? 'poison' : 'dmg'] + ' ' + L(p ? 'stPoison' : 'stDmg'), value: p ? L('perSec', Math.round(s.poison)) : String(Math.round(s.dmg)) },
+    { id: 'range', label: STAT_ICON.range + ' ' + L('stRange'), value: String(Math.round(s.range)) },
+    { id: 'speed', label: STAT_ICON.speed + ' ' + L('stSpeed'), value: L('perSec', (1 / s.rate).toFixed(1)) }
   ];
 }
 // Строка «Урон 12 · Дальность 170 · Скорость 2.2/с».
-function statLine(type, level) { return statRows(type, level).map(r => r.label + ' ' + r.value).join('   ·   '); }
+function statLine(type, level) { return statRows(type, level).map(r => r.label + ' ' + r.value).join('   '); }
