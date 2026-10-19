@@ -160,11 +160,13 @@ class MenuScene extends Phaser.Scene {
     this.add.text(W / 2, 286, L('subtitle'), { fontFamily: FONT, fontSize: '40px', fontStyle: 'bold', color: '#ffffff',
       stroke: '#2a1450', strokeThickness: 8 }).setOrigin(0.5);
 
-    uiButton(this, W / 2, 1076 - MENU_LIFT, 460, 108, '▶ ' + L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '54px');
-    uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
-    uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, '📖 ' + L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
-    uiButton(this, W / 2, 1272 - MENU_LIFT, 460, 70, `⬆ ${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
-    if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, 1272 - MENU_LIFT, 460, 70, 3);   // есть на что потратить кристаллы
+    // Кнопки меню: одинаковая высота (MB_H) и одинаковые промежутки (MB_GAP) между рядами.
+    const MB_H = 84, MB_GAP = 20, row = k => 1076 - MENU_LIFT + k * (MB_H + MB_GAP);
+    uiButton(this, W / 2, row(0), 460, MB_H, '▶ ' + L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px');
+    uiButton(this, W / 2 - 118, row(1), 224, MB_H, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
+    uiButton(this, W / 2 + 118, row(1), 224, MB_H, '📖 ' + L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
+    uiButton(this, W / 2, row(2), 460, MB_H, `⬆ ${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
+    if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, row(2), 460, MB_H, 3);   // есть на что потратить кристаллы
     const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
     let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
     this.add.zone(W - 90, 1250, 180, 60).setInteractive().on('pointerdown', () => {
