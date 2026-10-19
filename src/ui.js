@@ -35,6 +35,15 @@ const UI = {
   plate(scene, x, y, w, h, color, enabled = true) {
     return scene.add.image(x, y, this.buttonTex(scene, w, h, color, enabled)).setDisplaySize(w + 8, h + 12).setOrigin(0.5, (2 + h / 2) / (h + 12));
   },
+  // Блеск на кнопке: светлая полоса раз в пару секунд пробегает слева направо (кнопка «можно купить»).
+  // Возвращает { objs, tween } — объекты удаляются вместе с кнопкой, анимацию надо остановить.
+  shine(scene, x, y, w, h, depth) {
+    const m = scene.make.graphics({ add: false }); m.fillStyle(0xffffff); m.fillRoundedRect(x - w / 2, y - h / 2, w, h, Math.min(18, h / 2.6));
+    const bar = scene.add.rectangle(x - w / 2 - 40, y, 34, h * 1.6, 0xffffff, 0.45).setAngle(18).setDepth(depth).setBlendMode(Phaser.BlendModes.ADD);
+    bar.setMask(m.createGeometryMask());
+    const tween = scene.tweens.add({ targets: bar, x: x + w / 2 + 40, duration: 700, delay: 300, repeatDelay: 1600, repeat: -1, ease: 'Sine.easeInOut' });
+    return { objs: [bar, { destroy: () => m.destroy() }], tween };
+  },
   // Кнопка с подписью. Возвращает [картинка, текст]. opts: depth, size, enabled, silent.
   button(scene, x, y, w, h, label, color, cb, opts = {}) {
     const { depth = 1, size = '30px', enabled = true, silent = false } = opts;

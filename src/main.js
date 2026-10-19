@@ -195,9 +195,6 @@ class GameScene extends Phaser.Scene {
     t.gfx = this.add.sprite(slot.x, slot.y, `t_${type}_1`).setOrigin(0.5, 0.85).setDepth(8);
     this.towerLook(t);
     t.label = this.add.text(slot.x, slot.y + 40, '★', { fontFamily: FONT, fontSize: '16px', color: '#ffe066' }).setOrigin(0.5).setDepth(9);
-    // Неброская подсказка «можно эволюционировать»: маленькая золотая стрелка у ног стража, медленно мерцает.
-    t.up = this.add.text(slot.x + 30, slot.y + 30, '▲', { fontFamily: FONT, fontSize: '20px', color: '#ffe066', stroke: '#3a2a00', strokeThickness: 4 }).setOrigin(0.5).setDepth(9).setVisible(false);
-    this.tweens.add({ targets: t.up, alpha: 0.35, y: t.up.y - 5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     slot.tower = t; this.towers.push(t); Sfx.play('build');
     // После покупки фокус остаётся на новом страже: сразу открывается его экран эволюции.
     // Только в обучении панель закрывается — следующая подсказка показывает на кнопку волны.
@@ -244,7 +241,7 @@ class GameScene extends Phaser.Scene {
     if (this.time.now - (t.born || 0) < 700) return;
     this.gold += Math.round(t.spent * SELL_RATE); Sfx.play('sell');
     if (t.idle) t.idle.stop();
-    t.gfx.destroy(); t.label.destroy(); t.up.destroy(); t.slot.tower = null;
+    t.gfx.destroy(); t.label.destroy(); t.slot.tower = null;
     this.towers = this.towers.filter(x => x !== t);
     this.selected = null; this.refresh();
   }
@@ -318,7 +315,6 @@ class GameScene extends Phaser.Scene {
 
   refresh() {
     this.livesText.setText(String(this.lives)); this.goldText.setText(String(this.gold));
-    for (const t of this.towers) t.up.setVisible(!this.over && t.level < MAX_LEVEL && this.gold >= this.upgradeCost(t));
     this.waveText.setText((HARD ? '☠ ' : '') + (this.endless ? L('waveEndless', this.wave) : L('wave', this.wave, WAVES.length)));
     if (this.lives < this.shownLives) {                        // потеря жизни: сердце вздрагивает
       this.tweens.add({ targets: [this.heart, this.livesText], scale: { from: 1.6, to: 1 }, duration: 350, ease: 'Back.easeOut' });
@@ -460,6 +456,7 @@ class GameScene extends Phaser.Scene {
       });
       // «Эволюция» — большая, «Продать» — маленькая и в стороне, чтобы не нажать её случайно.
       this.btn(240, 1130, 440, 70, '', 0x2e8b57, ok, () => this.upgrade(t));
+      if (ok) { const sh = UI.shine(this, 240, 1127, 440, 62, 23); this.panelItems.push(...sh.objs); this.panelTweens.push(sh.tween); }   // хватает золота — кнопка поблёскивает
       this.price(240, 1127, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
       this.btn(612, 1134, 176, 56, '', 0xa33a3a, true, () => this.sell(t));
       this.price(612, 1131, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 19, '#fff', '#ffe066');

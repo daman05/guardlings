@@ -164,6 +164,7 @@ class MenuScene extends Phaser.Scene {
     uiButton(this, W / 2 - 118, 1190 - MENU_LIFT, 224, 70, L('settings'), 0x5a4f7a, () => settingsOverlay(this, null, true), 1, '27px');
     uiButton(this, W / 2 + 118, 1190 - MENU_LIFT, 224, 70, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
     uiButton(this, W / 2, 1272 - MENU_LIFT, 460, 70, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
+    if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, 1272 - MENU_LIFT, 460, 70, 3);   // есть на что потратить кристаллы
     const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
     let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
     this.add.zone(W - 90, 1250, 180, 60).setInteractive().on('pointerdown', () => {
@@ -275,7 +276,8 @@ class UpgradeScene extends Phaser.Scene {
       if (!max) this.add.text(34, y + 10, '→ ' + upgradeText(id, lvl + 1), { fontFamily: FONT, fontSize: '18px', color: '#7CFC8A' }).setDepth(3);
       for (let k = 0; k < UP_COST.length; k++) this.add.rectangle(46 + k * 44, y + 46, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3);
       if (max) this.add.text(566, y + 4, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
-      else UI.button(this, 566, y + 4, 196, 70, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
+      else { UI.button(this, 566, y + 4, 196, 70, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
+        if (ok) UI.shine(this, 566, y + 4, 196, 70, 4); }
     });
     // Кристаллы за просмотр ролика — только там, где площадка умеет показывать рекламу за награду.
     if (Platform.ads.rewarded) uiButton(this, W / 2, 1150, 460, 64, L('adCrystals', REWARD.ad), 0x8a5a2e, () => Platform.ads.showRewarded().then(ok => { if (ok) { Meta.add(REWARD.ad); Sfx.play('evolve'); } this.scene.restart(); }), 1, '26px');
