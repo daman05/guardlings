@@ -190,13 +190,14 @@ class GameScene extends Phaser.Scene {
     const d = TOWERS[type];
     if (slot.tower || this.gold < d.cost) return;
     this.gold -= d.cost;
-    const t = { type, slot, level: 1, cd: 0, spent: d.cost, x: slot.x, y: slot.y };
+    const t = { type, slot, level: 1, cd: 0, spent: d.cost, x: slot.x, y: slot.y, born: this.time.now };
     t.gfx = this.add.sprite(slot.x, slot.y, `t_${type}_1`).setOrigin(0.5, 0.85).setDepth(8);
     this.towerLook(t);
     t.label = this.add.text(slot.x, slot.y + 40, '★', { fontFamily: FONT, fontSize: '16px', color: '#ffe066' }).setOrigin(0.5).setDepth(9);
     slot.tower = t; this.towers.push(t); Sfx.play('build');
-    this.selected = null;                          // после покупки панель возвращается к кнопке волны
-    if (this.tut === 2 || this.tut === 1) this.tutorial(this.waveActive ? 0 : 3);
+    // После покупки фокус остаётся на новом страже: сразу открывается его экран эволюции.
+    // Только в обучении панель закрывается — следующая подсказка показывает на кнопку волны.
+    if (this.tut === 2 || this.tut === 1) { this.selected = null; this.tutorial(this.waveActive ? 0 : 3); }
     this.refresh();
   }
 
@@ -234,6 +235,8 @@ class GameScene extends Phaser.Scene {
   }
 
   sell(t) {
+    // «Продать» оказывается там же, где была карточка витрины: случайное второе нажатие сразу после покупки не считаем.
+    if (this.time.now - (t.born || 0) < 700) return;
     this.gold += Math.round(t.spent * SELL_RATE); Sfx.play('sell');
     if (t.idle) t.idle.stop();
     t.gfx.destroy(); t.label.destroy(); t.slot.tower = null;
