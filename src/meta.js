@@ -37,9 +37,9 @@ const Meta = {
 
 // Характеристики стража на стадии level (с учётом купленных улучшений).
 function guardStats(type, level) {
-  const d = TOWERS[type], k = Math.pow(1.6, level - 1) * (1 + Meta.bonus('dmg') / 100);
-  return { dmg: d.dmg * k, range: d.range * (1 + 0.12 * (level - 1)), rate: d.rate, splash: d.splash || 0, slow: d.slow || 0,
-           poison: (d.poison || 0) * k, ptime: d.ptime || 0 };
+  const d = TOWERS[type], up = LEVEL_UP, n = level - 1, bonus = 1 + Meta.bonus('dmg') / 100;
+  return { dmg: d.dmg * Math.pow(up.dmg, n) * bonus, range: d.range * (1 + up.range * n), rate: d.rate / Math.pow(up.speed, n),
+           splash: d.splash || 0, slow: d.slow || 0, poison: (d.poison || 0) * Math.pow(up.poison, n) * bonus, ptime: d.ptime || 0 };
 }
 // Три характеристики стража в одном виде для всех экранов (витрина, эволюция, карточка «i», справочник):
 // всегда в этом порядке — урон (у Ядозуба яд), дальность, скорость атаки.
