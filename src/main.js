@@ -99,6 +99,9 @@ class GameScene extends Phaser.Scene {
     this.speedText = topBtn(600, 'x1', '28px', () => { this.speed = this.speed % 3 + 1; this.speedText.setText('x' + this.speed); Sfx.play('tap'); });
     topBtn(678, 'II', '30px', () => { Sfx.play('tap'); this.pauseGame(); });
 
+    // Esc на компьютере и кнопка «Назад» в браузере телефона, если она шлёт Esc, закрывают панель.
+    this.input.keyboard && this.input.keyboard.on('keydown-ESC', () => { if (this.aim) { this.aim = false; this.aimGfx.setVisible(false); this.refresh(); } else if (this.selected) this.select(null); });
+
     // Сворачивание приложения во время игры ставит паузу.
     const onHide = () => this.pauseGame();
     this.game.events.on('hidden', onHide); window.addEventListener('blur', onHide);
@@ -152,6 +155,7 @@ class GameScene extends Phaser.Scene {
   // ---------- действия игрока ----------
   select(slot) {
     if (this.over || this.aim) return;             // пока выбирается цель метеора, поле не реагирует
+    if (slot && slot === this.selected) slot = null;   // повторное нажатие на ту же площадку или стража закрывает панель
     if (slot) Sfx.play('tap');
     this.selected = slot;
     if (this.tut === 1 && slot && !slot.tower) this.tutorial(2);
@@ -334,9 +338,13 @@ class GameScene extends Phaser.Scene {
     if (key === this.panelKey) return;
     this.panelKey = key; this.clearPanel();
 
-    if (s && !t) { this.shop(s); return; }          // витрина занимает всю нижнюю панель
-
-    if (t) { this.evoPanel(t); return; }             // экран эволюции тоже занимает всю панель
+    if (s) {                                         // витрина или экран эволюции занимают всю нижнюю панель
+      if (t) this.evoPanel(t); else this.shop(s);
+      // Ярлык «✕» над правым краем панели закрывает её (как и нажатие на поле или повторное нажатие на площадку).
+      const [cb, ct] = UI.button(this, W - 52, 894, 84, 62, '✕', 0xa33a3a, () => this.select(null), { depth: 23, size: '34px' });
+      this.panelItems.push(cb, ct);
+      return;
+    }
 
     // Способности игрока: метеор и заморозка. Пока идёт перезарядка, на кнопке тикают секунды.
     this.abText = {};
