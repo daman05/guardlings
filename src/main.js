@@ -595,11 +595,11 @@ class GameScene extends Phaser.Scene {
     }
     const b = (label, color, cb) => { o.push(...uiButton(this, W / 2, y, 460, 92, label, color, cb, 31, '36px')); y += 112; };
     const leave = go => Platform.ads.showInterstitial().then(go);     // между забегами площадка может показать рекламу
-    if (win && MAP_INDEX + 1 < MAPS.length && mapUnlocked(MAP_INDEX + 1, HARD)) b(L('nextMap'), 0x2e8b57, () => leave(() => this.scene.restart({ map: MAP_INDEX + 1 })));
+    if (win && MAP_INDEX + 1 < MAPS.length && mapUnlocked(MAP_INDEX + 1, HARD)) b('➜  ' + L('nextMap'), BTN.next, () => leave(() => this.scene.restart({ map: MAP_INDEX + 1 })));
     // После победы можно остаться на карте: волны идут дальше, пока портал держится.
-    if (win) b(L('endless'), 0x8a5a2e, () => { o.forEach(x => x.destroy()); this.endItems = []; this.over = false; this.endless = true; this.panelKey = null; this.refresh(); });
-    b(L('retry'), 0x2e6fd1, () => leave(() => this.scene.restart()));
-    b(L('toMenu'), 0x5a4f7a, () => leave(() => this.scene.start('menu')));
+    if (win) b('∞  ' + L('endless'), BTN.endless, () => { o.forEach(x => x.destroy()); this.endItems = []; this.over = false; this.endless = true; this.panelKey = null; this.refresh(); });
+    b('↻  ' + L('retry'), BTN.retry, () => leave(() => this.scene.restart()));
+    b('⌂  ' + L('toMenu'), BTN.menu, () => leave(() => this.scene.start('menu')));
   }
 
   // ---------- пауза ----------
@@ -609,10 +609,10 @@ class GameScene extends Phaser.Scene {
     const o = [this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.75).setDepth(30).setInteractive(),
       this.add.text(W / 2, 400, L('pause'), { fontFamily: FONT, fontSize: '80px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(31),
       this.add.text(W / 2, 480, L('pauseInfo', L('m_' + MAP_INDEX), this.wave, WAVES.length), { fontFamily: FONT, fontSize: '28px', color: '#ccc' }).setOrigin(0.5).setDepth(31)];
-    o.push(...uiButton(this, W / 2, 620, 440, 96, L('resume'), 0x2e8b57, () => this.resumeGame(), 31, '38px'));
-    o.push(...uiButton(this, W / 2, 740, 440, 96, L('retry'), 0x2e6fd1, () => { this.tweens.resumeAll(); this.anims.resumeAll(); this.scene.restart(); }, 31, '38px'));
-    o.push(...uiButton(this, W / 2, 860, 440, 96, L('settings'), 0x5a4f7a, () => settingsOverlay(this, () => this.showMute()), 31, '38px'));
-    o.push(...uiButton(this, W / 2, 980, 440, 96, L('toMenu'), 0x5a4f7a, () => { this.tweens.resumeAll(); this.anims.resumeAll(); this.scene.start('menu'); }, 31, '38px'));
+    o.push(...uiButton(this, W / 2, 620, 440, 96, '▶  ' + L('resume'), BTN.resume, () => this.resumeGame(), 31, '38px'));
+    o.push(...uiButton(this, W / 2, 740, 440, 96, '↻  ' + L('retry'), BTN.retry, () => { this.tweens.resumeAll(); this.anims.resumeAll(); this.scene.restart(); }, 31, '38px'));
+    o.push(...uiButton(this, W / 2, 860, 440, 96, '⚙  ' + L('settings'), BTN.settings, () => settingsOverlay(this, () => this.showMute()), 31, '38px'));
+    o.push(...uiButton(this, W / 2, 980, 440, 96, '⌂  ' + L('toMenu'), BTN.menu, () => { this.tweens.resumeAll(); this.anims.resumeAll(); this.scene.start('menu'); }, 31, '38px'));
     this.pauseItems = o;
   }
   resumeGame() {
