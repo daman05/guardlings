@@ -133,15 +133,7 @@ class GameScene extends Phaser.Scene {
     return PATH[PATH.length - 1];
   }
 
-  stats(t) {
-    const d = TOWERS[t.type];
-    return {
-      dmg: d.dmg * Math.pow(1.6, t.level - 1) * (1 + Meta.bonus('dmg') / 100),
-      range: d.range * (1 + 0.12 * (t.level - 1)),
-      rate: d.rate, splash: d.splash || 0, slow: d.slow || 0,
-      poison: (d.poison || 0) * Math.pow(1.6, t.level - 1) * (1 + Meta.bonus('dmg') / 100), ptime: d.ptime || 0
-    };
-  }
+  stats(t) { return guardStats(t.type, t.level); }
   // Ставит стражу кадр позы: '' обычный, 'b' моргание, 'w' замах, 'a' атака.
   // Возвращает false, если такого кадра у монстра нет.
   pose(t, suffix) {
@@ -400,7 +392,7 @@ class GameScene extends Phaser.Scene {
       add(this.add.text(x, 524, '★'.repeat(l) + (l === t.level ? '  ' + L('stageNow') : ''), { fontFamily: FONT, fontSize: '18px', color: on ? '#ffe066' : '#9a93b0', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 3));
       if (!on) plate.on('pointerdown', () => { Sfx.play('tap'); close(); this.guardInfo(t, l); });
     }
-    tx(596, `${d.poison ? L('poisonN', Math.round(st.poison)) : L('damageN', Math.round(st.dmg))}    ${L('rangeN', Math.round(st.range))}\n${L('aps', (1 / st.rate).toFixed(1))}`, '24px', '#9fd3ff');
+    tx(590, statLine(t.type, lvl), '23px', '#9fd3ff', true);
     tx(720, L('g_' + t.type), '25px', '#ffffff');
     UI.button(this, W / 2, 864, 300, 80, L('close'), 0x2e6fd1, close, { depth: D + 2, size: '32px' }).forEach(x => o.push(x));
   }
@@ -426,21 +418,25 @@ class GameScene extends Phaser.Scene {
       txt(402, 952, `${L('evolution')}  ${stars(t.level + 1)}`, '22px', '#ffe066', true);
       const fr = this.portrait(402, py, PW, PH, t.type, t.level + 1, 0xffe066, D);
       this.ptween({ targets: fr, alpha: 0.45, duration: 700, yoyo: true, repeat: -1 });      // золотая рамка мерцает
-      // Что изменится
-      const row = (y, name, a, b) => { txt(534, y, name, '18px', '#b9b2cc', false, 0); txt(534, y + 26, `${a} → `, '24px', '#ffffff', true, 0);
-        const w = this.panelItems[this.panelItems.length - 1].width; txt(534 + w, y + 26, String(b), '24px', '#7CFC8A', true, 0); };
-      row(1000, d.poison ? L('poisonPs') : L('damage'), Math.round(cur.poison || cur.dmg), Math.round(nx.poison || nx.dmg));
-      row(1072, L('range'), Math.round(cur.range), Math.round(nx.range));
-      this.panelItems[this.panelItems.length - 1].setColor('#ffe066');      // золотой — как круг будущей дальности
+      // Что изменится: те же три характеристики и в том же порядке, что в витрине и карточке «i».
+      // Новое значение: урон зелёный, дальность золотая (как круг на поле), скорость не меняется.
+      const now = statRows(t.type, t.level), next = statRows(t.type, t.level + 1);
+      now.forEach((r, i) => {
+        const y = 976 + i * 64, n = next[i];
+        txt(530, y, r.label, '17px', '#b9b2cc', false, 0);
+        const a = txt(530, y + 24, r.value === n.value ? r.value : r.value + ' → ', '22px', '#ffffff', true, 0);
+        if (r.value !== n.value) txt(530 + a.width, y + 24, n.value, '22px', r.id === 'range' ? '#ffe066' : '#7CFC8A', true, 0);
+      });
       this.btn(190, 1228, 340, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
       this.price(190, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
       this.btn(540, 1228, 320, 80, '', 0xa33a3a, true, () => this.sell(t));
       this.price(540, 1225, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 26, '#fff', '#ffe066');
     } else {
-      txt(480, 990, L('maxEvo'), '26px', '#ffe066', true);
-      txt(480, 1040, d.poison ? L('poisonN', Math.round(cur.poison)) : L('damageN', Math.round(cur.dmg)), '24px', '#ffffff', true);
-      txt(480, 1076, L('rangeN', Math.round(cur.range)), '24px', '#ffffff', true);
-      txt(480, 1112, L('aps', (1 / cur.rate).toFixed(1)), '24px', '#ffffff', true);
+      txt(480, 972, L('maxEvo'), '24px', '#ffe066', true);
+      statRows(t.type, t.level).forEach((r, i) => {
+        const y = 1024 + i * 46, a = txt(300, y, r.label + '  ', '21px', '#b9b2cc', false, 0);
+        txt(300 + a.width, y, r.value, '23px', '#ffffff', true, 0);
+      });
       this.btn(W / 2, 1228, 680, 80, '', 0xa33a3a, true, () => this.sell(t));
       this.price(W / 2, 1225, L('release'), '+' + Math.round(t.spent * SELL_RATE), 24, 26, '#fff', '#ffe066');
     }
@@ -520,8 +516,7 @@ class GameScene extends Phaser.Scene {
       const txt = (y, str, size, color, bold) => add(this.add.text(cx, y, str, { fontFamily: FONT, fontSize: size, color, fontStyle: bold ? 'bold' : 'normal' }).setOrigin(0.5).setDepth(D + 5));
       txt(T + 164, L('t_' + type), '25px', ok ? '#fff' : '#888', true);
       txt(T + 190, L('d_' + type), '15px', ok ? '#bbb' : '#666');
-      txt(T + 220, d.poison ? L('poisonN', d.poison) : L('damageN', d.dmg), '16px', ok ? '#9fd3ff' : '#555');
-      txt(T + 242, L('rangeN', d.range), '16px', ok ? '#9fd3ff' : '#555');
+      statRows(type, 1).forEach((r, k) => txt(T + 214 + k * 21, r.label + ' ' + r.value, '15px', ok ? '#9fd3ff' : '#555'));
       add(UI.plate(this, cx, T + 297, 156, 44, ok ? 0x2e8b57 : 0x5a2626).setDepth(D + 4));
       this.price(cx, T + 296, ok ? L('summon') : L('need'), d.cost, D + 5, 19, ok ? '#fff' : '#b88', ok ? '#ffe066' : '#ff7777', !ok);
     });

@@ -249,7 +249,7 @@ class BookScene extends Phaser.Scene {
         for (let l = 1, x = 22; l <= MAX_LEVEL; l++) { const sz = 56 + l * 10; this.add.image(x + sz / 2, y + 78, `t_${k}_${l}`).setOrigin(0.5, 1).setDisplaySize(sz, sz).setDepth(3); x += sz - 4; }
         txt(30, y - 92, L('t_' + k), '27px', '#ffe066', true);
         this.add.text(676, y - 76, L('bkCost', d.cost), { fontFamily: FONT, fontSize: '20px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(3);
-        txt(250, y - 50, `${d.poison ? L('poisonN', d.poison) : L('damageN', d.dmg)}   ${L('rangeN', d.range)}\n${L('aps', (1 / d.rate).toFixed(1))}`, '18px', '#9fd3ff');
+        txt(250, y - 50, statRows(k, 1).map(r => r.label + ' ' + r.value).join('   ·   '), '17px', '#9fd3ff');
         txt(250, y + 6, L('g_' + k), '19px', '#e8e4f2');
       });
     }

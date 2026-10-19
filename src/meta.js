@@ -34,3 +34,22 @@ const Meta = {
   // Записывает результат победы; возвращает, сколько звёзд добавилось к рекорду карты.
   win(i, n) { const had = Platform.storage.get(mk('stars', i), 0); if (n > had) Platform.storage.set(mk('stars', i), n); return Math.max(0, n - had); }
 };
+
+// Характеристики стража на стадии level (с учётом купленных улучшений).
+function guardStats(type, level) {
+  const d = TOWERS[type], k = Math.pow(1.6, level - 1) * (1 + Meta.bonus('dmg') / 100);
+  return { dmg: d.dmg * k, range: d.range * (1 + 0.12 * (level - 1)), rate: d.rate, splash: d.splash || 0, slow: d.slow || 0,
+           poison: (d.poison || 0) * k, ptime: d.ptime || 0 };
+}
+// Три характеристики стража в одном виде для всех экранов (витрина, эволюция, карточка «i», справочник):
+// всегда в этом порядке — урон (у Ядозуба яд), дальность, скорость атаки.
+function statRows(type, level) {
+  const s = guardStats(type, level), p = !!TOWERS[type].poison;
+  return [
+    { id: 'dmg', label: L(p ? 'stPoison' : 'stDmg'), value: p ? L('perSec', Math.round(s.poison)) : String(Math.round(s.dmg)) },
+    { id: 'range', label: L('stRange'), value: String(Math.round(s.range)) },
+    { id: 'speed', label: L('stSpeed'), value: L('perSec', (1 / s.rate).toFixed(1)) }
+  ];
+}
+// Строка «Урон 12 · Дальность 170 · Скорость 2.2/с».
+function statLine(type, level) { return statRows(type, level).map(r => r.label + ' ' + r.value).join('   ·   '); }
