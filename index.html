@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17,24 +18,24 @@
 </style>
 </head>
 <body>
-<script src="vendor/phaser.min.js"></script>
-<script src="src/platform.js"></script>
-<script src="src/i18n.js"></script>
-<script src="src/config.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/ui.js"></script>
-<script src="src/scenery.js"></script>
 <script>
-  // Картинки: в интернете — отдельными файлами (быстрая загрузка), с диска — встроенные в код
-  // (иначе игра не откроется двойным щелчком).
-  (location.protocol === 'file:' ? ['sprites', 'portraits', 'art'] : ['images'])
-    .forEach(n => document.write('<script src="src/' + n + '.js"><\/script>'));
+  // Загрузка игры. Чтобы браузер не показывал старую версию из кеша, сначала без кеша читается
+  // version.json (номер сборки, меняется при каждой публикации), и все файлы игры запрашиваются
+  // с этим номером в адресе (?v=…). Новая сборка — новые адреса — браузер обязан скачать заново.
+  // С диска (двойной щелчок) кеша нет: файлы грузятся как есть, картинки — встроенные в код.
+  const disk = location.protocol === 'file:';
+  const FILES = ['vendor/phaser.min.js', 'src/platform.js', 'src/i18n.js', 'src/config.js', 'src/audio.js', 'src/ui.js', 'src/scenery.js']
+    .concat(disk ? ['src/sprites.js', 'src/portraits.js', 'src/art.js'] : ['src/images.js'])
+    .concat(['src/anims.js', 'src/portraits_evo.js', 'src/monsters.js', 'src/meta.js', 'src/menu.js', 'src/main.js']);
+  window.BUILD = '';
+  const start = () => {
+    const next = () => { if (!FILES.length) return; const el = document.createElement('script');
+      el.src = FILES.shift() + (BUILD ? '?v=' + BUILD : ''); el.onload = next; document.body.appendChild(el); };
+    next();
+  };
+  if (disk) start();
+  else fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { BUILD = String(j.v || ''); })
+    .catch(() => { BUILD = String(Date.now()); }).then(start);
 </script>
-<script src="src/anims.js"></script>
-<script src="src/portraits_evo.js"></script>
-<script src="src/monsters.js"></script>
-<script src="src/meta.js"></script>
-<script src="src/menu.js"></script>
-<script src="src/main.js"></script>
 </body>
 </html>
