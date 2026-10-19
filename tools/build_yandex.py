@@ -13,7 +13,7 @@ OUT = os.path.join(ROOT, 'dist', 'yandex')
 SCRIPTS = ['vendor/phaser.min.js', 'src/i18n.js', 'src/config.js', 'src/audio.js', 'src/ui.js', 'src/scenery.js', 'src/images.js',
            'src/anims.js', 'src/portraits_evo.js', 'src/monsters.js', 'src/meta.js', 'src/menu.js', 'src/main.js']
 FIRST = ['src/platform.js', 'src/platform_yandex.js']
-AUDIO = ['music_1.mp3', 'music_2.mp3', 'menu.mp3', 'battle_1.mp3']
+AUDIO = []                                 # музыки в игре нет
 
 HTML = """<!DOCTYPE html>
 <html lang="en">

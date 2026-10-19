@@ -6,7 +6,6 @@ class GameScene extends Phaser.Scene {
 
   create() {
     this.tweens.resumeAll(); this.anims.resumeAll(); this.paused = false;
-    Sfx.setMusic('battle');
     this.gold = BAL.startGold + (MAPS[MAP_INDEX].gold || 0) + Meta.bonus('gold'); this.endless = false; this.endItems = []; this.tipItems = []; this.tut = -1; this.wave = 0;
     this.maxLives = this.lives = START_LIVES + Meta.bonus('lives');
     this.cd = { meteor: 0, freeze: 0 }; this.aim = false; this.abText = {};
@@ -66,6 +65,9 @@ class GameScene extends Phaser.Scene {
     this.rangeGfx = this.add.circle(0, 0, 10, 0xffffff, 0.12).setStrokeStyle(2, 0xffffff, 0.7)
       .setVisible(false).setDepth(5);
     this.selGfx = this.add.circle(0, 0, 38).setStrokeStyle(4, 0xffe066).setVisible(false).setDepth(6);
+    // Дальность после эволюции: золотой мерцающий круг поверх нынешнего белого.
+    this.nextRangeGfx = this.add.circle(0, 0, 10, 0xffe066, 0.08).setStrokeStyle(4, 0xffe066, 0.95).setVisible(false).setDepth(5);
+    this.tweens.add({ targets: this.nextRangeGfx, alpha: 0.55, duration: 700, yoyo: true, repeat: -1 });
 
     // Верхняя панель
     UI.bar(this, W / 2, 45, W, 90, 'bottom').setDepth(20).setInteractive();
@@ -89,10 +91,10 @@ class GameScene extends Phaser.Scene {
     const topBtn = (x, label, size, cb) => {
       return UI.button(this, x, 43, 68, 56, label, 0x5a4f7a, cb, { depth: 21, size, silent: true })[1];
     };
-    // ♪ выключает и включает весь звук одним нажатием. Музыка и звуки по отдельности — в «Настройках» (пауза, меню).
+    // ♪ выключает и включает звук одним нажатием (то же, что в «Настройках»).
     const mt = topBtn(522, '♪', '34px', () => { Sfx.unlock(); Sfx.toggleAll(); this.showMute(); Sfx.play('tap'); });
     const cross = this.add.line(522, 43, -20, 16, 20, -16, 0xff5555).setOrigin(0).setLineWidth(4).setDepth(23);
-    this.showMute = () => { const off = !Sfx.musicOn && !Sfx.sfxOn; mt.setAlpha(off ? 0.35 : 1); cross.setVisible(off); };
+    this.showMute = () => { const off = !Sfx.sfxOn; mt.setAlpha(off ? 0.35 : 1); cross.setVisible(off); };
     this.showMute();
     this.speedText = topBtn(600, 'x1', '28px', () => { this.speed = this.speed % 3 + 1; this.speedText.setText('x' + this.speed); Sfx.play('tap'); });
     topBtn(678, 'II', '30px', () => { Sfx.play('tap'); this.pauseGame(); });
@@ -321,6 +323,9 @@ class GameScene extends Phaser.Scene {
     this.selGfx.setVisible(!!s); if (s) this.selGfx.setPosition(s.x, s.y);
     this.rangeGfx.setVisible(!!t);
     if (t) this.rangeGfx.setPosition(t.x, t.y).setRadius(this.stats(t).range);
+    const evo = t && t.level < MAX_LEVEL && !this.over;
+    this.nextRangeGfx.setVisible(!!evo);
+    if (evo) this.nextRangeGfx.setPosition(t.x, t.y).setRadius(this.stats({ type: t.type, level: t.level + 1 }).range);
 
     // Панель перестраивается только когда реально что-то изменилось,
     // иначе анимация витрины сбрасывалась бы при каждом убитом враге.
@@ -392,6 +397,7 @@ class GameScene extends Phaser.Scene {
         const w = this.panelItems[this.panelItems.length - 1].width; txt(534 + w, y + 26, String(b), '24px', '#7CFC8A', true, 0); };
       row(1000, d.poison ? L('poisonPs') : L('damage'), Math.round(cur.poison || cur.dmg), Math.round(nx.poison || nx.dmg));
       row(1072, L('range'), Math.round(cur.range), Math.round(nx.range));
+      this.panelItems[this.panelItems.length - 1].setColor('#ffe066');      // золотой — как круг будущей дальности
       this.btn(190, 1228, 340, 80, '', 0x2e8b57, ok, () => this.upgrade(t));
       this.price(190, 1225, L('evolve'), c, 24, 26, ok ? '#fff' : '#a09ca8', ok ? '#ffe066' : '#ff7777', !ok);
       this.btn(540, 1228, 320, 80, '', 0xa33a3a, true, () => this.sell(t));

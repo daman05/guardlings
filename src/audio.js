@@ -1,11 +1,8 @@
-// Звуки игры синтезируются кодом (Web Audio), музыка играет из файлов assets/audio.
-// Позже любой звук можно заменить файлом из assets/audio.
+// Звуки игры синтезируются кодом (Web Audio). Музыки в игре нет (убрана по решению автора).
 const Sfx = {
   ctx: null, last: {},
-  // Музыка и звуки игры включаются отдельно (экран «Настройки»). Выбор сохраняется.
-  musicOn: !Platform.storage.get('musicOff', Platform.storage.get('muted', false)),
+  // Звуки игры включаются и выключаются в «Настройках» и кнопкой ♪ в бою. Выбор сохраняется.
   sfxOn: !Platform.storage.get('sfxOff', Platform.storage.get('muted', false)),
-  get muted() { return !this.musicOn; },             // для кода музыки ниже
 
   // Вызывается при первом касании: браузеры не дают звук без действия игрока.
   unlock() {
@@ -19,7 +16,6 @@ const Sfx = {
       const echo = this.ctx.createDelay(0.5), echoGain = this.ctx.createGain(), echoCut = this.ctx.createBiquadFilter();   // лёгкое эхо: звуки не такие «сухие»
       echo.delayTime.value = 0.11; echoGain.gain.value = 0.2; echoCut.type = 'lowpass'; echoCut.frequency.value = 2400;
       this.sfxBus.connect(echo); echo.connect(echoCut); echoCut.connect(echoGain); echoGain.connect(this.master); echoGain.connect(echo);
-      this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = this.musicOn ? 0.55 : 0; this.musicBus.connect(this.master);
       const len = this.ctx.sampleRate * 0.5;
       this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
       const d = this.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -29,38 +25,21 @@ const Sfx = {
       document.addEventListener('visibilitychange', sync);
       window.addEventListener('blur', () => { this.blurred = true; sync(); });
       window.addEventListener('focus', () => { this.blurred = false; sync(); });
-      this.startMusic();
     }
     if (this.blurred && document.hasFocus()) this.blurred = false;
     if (document.hidden || this.blurred || this.held) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
-    // Музыка могла не запуститься с первой попытки (браузер ещё не разрешил звук) — пробуем снова.
-    if (this.musicEl && this.musicEl.paused && this.musicEl.getAttribute('src') && !this.muted && !document.hidden) this.musicEl.play().catch(() => {});
   },
   // Звук молчит, пока игра свёрнута, окно без фокуса или идёт реклама.
   held: false, blurred: false,
   hold(on) { this.held = on; this.applyHold(); },
   applyHold() {
     if (!this.ctx) return;
-    if (document.hidden || this.blurred || this.held) { this.ctx.suspend(); if (this.musicEl) this.musicEl.pause(); }
-    else { this.ctx.resume(); if (this.musicEl && !this.muted) this.musicEl.play().catch(() => {}); }
-  },
-  setMusicOn(on) {
-    this.musicOn = on; Platform.storage.set('musicOff', !on);
-    if (this.musicBus) this.musicBus.gain.value = on ? 0.55 : 0;
-    if (this.musicEl) { if (on) this.musicEl.play().catch(() => {}); else this.musicEl.pause(); }
+    if (document.hidden || this.blurred || this.held) this.ctx.suspend(); else this.ctx.resume();
   },
   setSfxOn(on) { this.sfxOn = on; Platform.storage.set('sfxOff', !on); },
-  // Быстрый выключатель: если что-то звучит — глушит всё, иначе возвращает то, что было включено.
-  toggleAll() {
-    if (this.musicOn || this.sfxOn) {
-      Platform.storage.set('soundBefore', { m: this.musicOn, s: this.sfxOn });
-      this.setMusicOn(false); this.setSfxOn(false);
-    } else {
-      const p = Platform.storage.get('soundBefore', { m: true, s: true });
-      this.setMusicOn(p.m || !p.s); this.setSfxOn(p.s || !p.m);
-    }
-  },
+  // Быстрый выключатель звука (кнопка ♪ в бою).
+  toggleAll() { this.setSfxOn(!this.sfxOn); },
 
   // Один тон. to — куда уезжает высота к концу, delay — задержка, att — время нарастания.
   tone(f, dur, type, vol, to, delay, bus, att) {
@@ -123,76 +102,9 @@ const Sfx = {
     const now = performance.now();
     if (now - (this.last[name] || 0) < 70) return;      // не даём одному звуку слипаться
     this.last[name] = now; this.defs[name].call(this);
-  },
-
-  // Музыка: у меню и у боя свои списки треков из assets/audio. Треки списка играют по очереди
-  // и по кругу, с плавным началом и концом. Чтобы добавить трек, положите файл в assets/audio
-  // и впишите его в нужный список.
-  playlists: {
-    menu: ['assets/audio/music_1.mp3', 'assets/audio/music_2.mp3', 'assets/audio/menu.mp3'],
-    battle: ['assets/audio/battle_1.mp3']
-  },
-  musicMode: 'menu', musicVol: 0.4,
-
-  // Переключает музыку: 'menu' — меню и выбор карты, 'battle' — игра на карте.
-  setMusic(mode) {
-    if (this.musicMode === mode) return;
-    this.musicMode = mode;
-    if (this.musicNext) this.musicNext();
-  },
-
-  startMusic() {
-    if (this.musicEl) return;
-    let i = 0, failed = 0, leaving = false;
-    const el = this.musicEl = new Audio(); el.preload = 'auto';
-    const list = () => this.playlists[this.musicMode];
-    const play = (shuffle) => {
-      if (shuffle) i = Math.floor(Math.random() * list().length);
-      leaving = false; el.volume = 0;
-      const next = list()[i % list().length];
-      if (el.getAttribute('src') === next) el.currentTime = 0;   // тот же трек: перематываем без повторной загрузки
-      else el.src = next;
-      if (!this.muted && !document.hidden && !this.blurred && !this.held) el.play().catch(() => {});
-    };
-    // Смена списка: текущий трек быстро затухает, затем начинается трек нового списка.
-    this.musicNext = () => { if (el.paused) play(true); else leaving = true; };
-    el.addEventListener('ended', () => { i++; play(); });
-    el.addEventListener('playing', () => { failed = 0; });
-    el.addEventListener('error', () => {                       // файл не найден или не читается
-      if (++failed >= 4) { el.pause(); this.musicEl = null; this.musicNext = null; this.startSynthMusic(); } else { i++; play(); }
-    });
-    setInterval(() => {
-      if (this.musicEl !== el || el.paused || !el.duration) return;
-      if (leaving) {
-        el.volume = Math.max(0, el.volume - this.musicVol / 6);
-        if (el.volume <= 0.01) play(true);
-        return;
-      }
-      const k = Math.min(1, el.currentTime / 1.5, (el.duration - el.currentTime) / 2);   // плавные края трека
-      el.volume = Math.max(0, Math.min(1, this.musicVol * k));
-    }, 100);
-    play(true);
-  },
-
-  // Запасная музыка, если файлов нет: петля из четырёх аккордов, синтезированная кодом.
-  startSynthMusic() {
-    const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
-    const hz = m => 440 * Math.pow(2, (m - 69) / 12);
-    const stepDur = 0.3, order = [0, 1, 2, 1, 0, 2, 1, 2];
-    let step = 0, next = this.ctx.currentTime + 0.1;
-    setInterval(() => {
-      if (this.ctx.state !== 'running') return;
-      if (next < this.ctx.currentTime) next = this.ctx.currentTime + 0.05;
-      while (next < this.ctx.currentTime + 0.4) {
-        const ch = chords[Math.floor(step / 8) % 4], i = step % 8, d = next - this.ctx.currentTime;
-        this.tone(hz(ch[order[i]] + 12), 0.28, 'triangle', 0.05, null, d, this.musicBus);
-        if (i === 0 || i === 4) this.tone(hz(ch[0] - 12), 0.55, 'sine', 0.11, null, d, this.musicBus);
-        step++; next += stepDur;
-      }
-    }, 100);
   }
 };
 
 // Телефонные браузеры разрешают звук только по завершённому касанию (отпускание пальца), а игра ловит
-// начало касания — поэтому музыка могла молчать до похода в настройки. Слушаем касания напрямую.
+// начало касания — поэтому звук мог молчать до первого полного нажатия. Слушаем касания напрямую.
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(e => window.addEventListener(e, () => Sfx.unlock(), true));

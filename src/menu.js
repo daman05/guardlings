@@ -4,12 +4,12 @@ function uiButton(scene, x, y, w, h, label, color, cb, depth = 1, size = '30px')
   return UI.button(scene, x, y, w, h, label, color, cb, { depth, size });
 }
 
-// Окно настроек: музыка и звуки игры включаются отдельно. Общее для меню и игры.
+// Окно настроек: звуки игры и (в главном меню) язык. Общее для меню и игры.
 function settingsOverlay(scene, onClose, withLang) {
   const o = [], D = 50, add = x => { o.push(x); return x; };
   add(scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.7).setDepth(D).setInteractive());
-  const top = withLang ? 380 : 420;               // с выбором языка окно выше
-  add(UI.card(scene, W / 2, withLang ? 650 : 620, 580, withLang ? 680 : 520, 0xf3d27a).setDepth(D + 1));
+  const top = withLang ? 440 : 480;               // с выбором языка окно выше
+  add(UI.card(scene, W / 2, withLang ? 650 : 620, 580, withLang ? 560 : 400, 0xf3d27a).setDepth(D + 1));
   add(scene.add.text(W / 2, top, L('settings'), { fontFamily: FONT, fontSize: '50px', color: '#ffe066', fontStyle: 'bold' }).setOrigin(0.5).setDepth(D + 2));
   const row = (y, onText, offText, get, set) => {
     let pair = null;
@@ -19,18 +19,17 @@ function settingsOverlay(scene, onClose, withLang) {
     };
     make(); o.push({ destroy: () => pair.forEach(x => x.destroy()) });
   };
-  row(top + 120, L('musicOn'), L('musicOff'), () => Sfx.musicOn, v => Sfx.setMusicOn(v));
-  row(top + 240, L('sfxOn'), L('sfxOff'), () => Sfx.sfxOn, v => Sfx.setSfxOn(v));
+  row(top + 120, L('sfxOn'), L('sfxOff'), () => Sfx.sfxOn, v => Sfx.setSfxOn(v));
   // Язык меняется только из главного меню: экран перерисовывается целиком.
   if (withLang) {                                  // выбор языка: все языки видны сразу, текущий подсвечен
-    add(scene.add.text(W / 2, top + 322, L('languageLabel'), { fontFamily: FONT, fontSize: '26px', color: '#b9b2cc' }).setOrigin(0.5).setDepth(D + 2));
+    add(scene.add.text(W / 2, top + 202, L('languageLabel'), { fontFamily: FONT, fontSize: '26px', color: '#b9b2cc' }).setOrigin(0.5).setDepth(D + 2));
     LANGS.forEach((code, i) => {
       const on = code === LANG, x = W / 2 + (i - (LANGS.length - 1) / 2) * 246;
-      UI.button(scene, x, top + 392, 230, 88, (on ? '✓ ' : '') + STRINGS[code].languageName, on ? 0x2e8b57 : 0x5a4f7a,
+      UI.button(scene, x, top + 272, 230, 88, (on ? '✓ ' : '') + STRINGS[code].languageName, on ? 0x2e8b57 : 0x5a4f7a,
         () => { if (!on) { setLang(code); scene.scene.restart(); } }, { depth: D + 2, size: '30px' }).forEach(b => o.push(b));
     });
   }
-  UI.button(scene, W / 2, top + (withLang ? 520 : 380), 320, 88, L('done'), 0x2e6fd1, () => { o.forEach(x => x.destroy()); if (onClose) onClose(); }, { depth: D + 2, size: '36px' }).forEach(x => o.push(x));
+  UI.button(scene, W / 2, top + (withLang ? 400 : 260), 320, 88, L('done'), 0x2e6fd1, () => { o.forEach(x => x.destroy()); if (onClose) onClose(); }, { depth: D + 2, size: '36px' }).forEach(x => o.push(x));
 }
 
 // Рисует таблицу рекордов (до 10 строк) в список объектов o. hi — номер строки, которую нужно подсветить.
@@ -131,7 +130,7 @@ const MENU_LIFT = 100;            // на сколько подняты карт
 class MenuScene extends Phaser.Scene {
   constructor() { super('menu'); }
   create() {
-    this.tweens.resumeAll(); Sfx.setMusic('menu');
+    this.tweens.resumeAll();
     Platform.ready();                              // площадке: игра загрузилась, можно играть
     Monsters.makeAll(this);
     this.input.on('pointerdown', () => Sfx.unlock());
@@ -176,7 +175,6 @@ class MapScene extends Phaser.Scene {
   init(data) { this.hard = !!(data && data.hard); }
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
-    Sfx.setMusic('menu');
     this.add.rectangle(W / 2, H / 2, W, H, 0x24512c);
     this.add.text(W / 2, 58, L('chooseMap'), { fontFamily: FONT, fontSize: '44px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
     const hard = this.hard;
@@ -225,7 +223,7 @@ class BookScene extends Phaser.Scene {
   init(data) { this.tab = (data && data.tab) || 'enemies'; }
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
-    Sfx.setMusic('menu'); Monsters.makeAll(this);
+    Monsters.makeAll(this);
     this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
     this.add.text(W / 2, 70, L('book'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
     const tabBtn = (x, id, label) => uiButton(this, x, 150, 330, 64, label, this.tab === id ? 0x2e6fd1 : 0x5a4f7a, () => { if (this.tab !== id) this.scene.restart({ tab: id }); }, 1, '26px');
@@ -261,7 +259,6 @@ class UpgradeScene extends Phaser.Scene {
   constructor() { super('upgrades'); }
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
-    Sfx.setMusic('menu');
     this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
     this.add.text(W / 2, 70, L('upgrades'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
     this.add.text(W / 2, 138, `◆ ${Meta.crystals}`, { fontFamily: FONT, fontSize: '44px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5);

@@ -3,9 +3,9 @@
 // Чтобы добавить язык, скопируйте блок en, переведите строки и добавьте код языка в LANGS.
 const STRINGS = {
   en: {
-    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.9', loading: 'Loading…',
-    languageLabel: 'Language', languageName: 'English', musicOn: '♪  Music: on', musicOff: '♪  Music: off',
-    sfxOn: 'Sound effects: on', sfxOff: 'Sound effects: off', done: 'Done',
+    subtitle: 'Monster Defense', play: 'Play', settings: 'Settings', version: 'version 0.10', loading: 'Loading…',
+    languageLabel: 'Language', languageName: 'English',
+    sfxOn: '♪  Sound: on', sfxOff: '♪  Sound: off', done: 'Done',
     chooseMap: 'Choose a map', mapN: 'Map {0}', cleared: '★ Cleared', best: 'Best: {0} of {1} waves',
     locked: 'Locked.\nClear map {0} to unlock.', back: 'Back',
     portal: 'PORTAL', wave: 'Wave {0}/{1}', hint: 'Tap a spot to summon a guardian',
@@ -47,9 +47,9 @@ const STRINGS = {
     tut3: 'Now start the wave.\nDon\'t let monsters reach the portal!', tut4: 'You earned gold!\nTap a guardian to evolve it', tutSkip: 'tap to hide'
   },
   ru: {
-    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.9', loading: 'Загрузка…',
-    languageLabel: 'Язык', languageName: 'Русский', musicOn: '♪  Музыка: включена', musicOff: '♪  Музыка: выключена',
-    sfxOn: 'Звуки игры: включены', sfxOff: 'Звуки игры: выключены', done: 'Готово',
+    subtitle: 'Монстры-стражи', play: 'Играть', settings: 'Настройки', version: 'версия 0.10', loading: 'Загрузка…',
+    languageLabel: 'Язык', languageName: 'Русский',
+    sfxOn: '♪  Звук: включён', sfxOff: '♪  Звук: выключен', done: 'Готово',
     chooseMap: 'Выбор карты', mapN: 'Карта {0}', cleared: '★ Пройдена', best: 'Рекорд: {0} из {1} волн',
     locked: 'Закрыта.\nПройдите карту {0}, чтобы открыть.', back: 'Назад',
     portal: 'ПОРТАЛ', wave: 'Волна {0}/{1}', hint: 'Нажмите на площадку, чтобы призвать стража',
