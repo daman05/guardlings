@@ -181,7 +181,7 @@ class MenuScene extends Phaser.Scene {
     withIcon(uiButton(this, W / 2, row(0), 460, MB_H, L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px')[1],
       this.add.text(0, 0, '▶', { fontFamily: FONT, fontSize: '27px', color: '#ffffff' }).setOrigin(0.5).setShadow(0, 2, 'rgba(0,0,0,0.6)', 3), 22);
     uiButton(this, W / 2 - 118, row(1), 224, MB_H, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
-    withIcon(uiButton(this, W / 2 + 118, row(1), 224, MB_H, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px')[1], this.add.image(0, 0, whiteIcon(this, '📖', 26)));
+    withIcon(uiButton(this, W / 2 + 118, row(1), 224, MB_H, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px')[1], this.add.image(0, 0, whiteIcon(this, '👾', 26)));
     withIcon(uiButton(this, W / 2, row(2), 460, MB_H, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px')[1],
       this.add.image(0, 0, whiteIcon(this, '💪', 30)));
     if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, row(2), 460, MB_H, 3);   // есть на что потратить кристаллы
