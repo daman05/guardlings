@@ -1,5 +1,15 @@
 // Оболочка игры: главное меню и выбор карты.
 
+// Белый силуэт эмодзи (цветной значок становится белым, как текстовые ⚙ и ▶ на соседних кнопках).
+function whiteIcon(scene, emoji, size) {
+  const key = 'wi_' + emoji + size;
+  if (scene.textures.exists(key)) return key;
+  const S = Math.ceil(size * 1.4), t = scene.textures.createCanvas(key, S, S), c = t.getContext();
+  c.font = size + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(emoji, S / 2, S / 2 + size * 0.06);
+  const d = c.getImageData(0, 0, S, S); for (let i = 0; i < d.data.length; i += 4) { d.data[i] = d.data[i + 1] = d.data[i + 2] = 255; }
+  c.putImageData(d, 0, 0); t.refresh(); return key;
+}
+
 function uiButton(scene, x, y, w, h, label, color, cb, depth = 1, size = '30px') {
   return UI.button(scene, x, y, w, h, label, color, cb, { depth, size });
 }
@@ -162,10 +172,14 @@ class MenuScene extends Phaser.Scene {
 
     // Кнопки меню: одинаковая высота (MB_H) и одинаковые промежутки (MB_GAP) между рядами.
     const MB_H = 84, MB_GAP = 20, row = k => 1076 - MENU_LIFT + k * (MB_H + MB_GAP);
-    uiButton(this, W / 2, row(0), 460, MB_H, '▶ ' + L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px');
+    // Значок слева от надписи, отдельным объектом: так его размер одинаковый на всех кнопках меню.
+    const withIcon = (txt, icon, gap = 12) => { const w = icon.displayWidth + gap; txt.x += w / 2; icon.setPosition(txt.x - txt.width / 2 - w / 2, txt.y).setDepth(txt.depth); };
+    withIcon(uiButton(this, W / 2, row(0), 460, MB_H, L('play'), 0x2e8b57, () => this.scene.start('maps'), 1, '42px')[1],
+      this.add.text(0, 0, '▶', { fontFamily: FONT, fontSize: '27px', color: '#ffffff' }).setOrigin(0.5).setShadow(0, 2, 'rgba(0,0,0,0.6)', 3), 22);
     uiButton(this, W / 2 - 118, row(1), 224, MB_H, '⚙ ' + L('settings'), BTN.settings, () => settingsOverlay(this, null, true), 1, '27px');
-    uiButton(this, W / 2 + 118, row(1), 224, MB_H, '📖 ' + L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px');
-    uiButton(this, W / 2, row(2), 460, MB_H, `💪 ${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px');
+    withIcon(uiButton(this, W / 2 + 118, row(1), 224, MB_H, L('book'), 0x8a5a2e, () => this.scene.start('book'), 1, '27px')[1], this.add.image(0, 0, whiteIcon(this, '📖', 26)));
+    withIcon(uiButton(this, W / 2, row(2), 460, MB_H, `${L('upgrades')}   ◆ ${Meta.crystals}`, 0x2c7f96, () => this.scene.start('upgrades'), 1, '27px')[1],
+      this.add.image(0, 0, whiteIcon(this, '💪', 30)));
     if (UP_ORDER.some(id => !Meta.maxed(id) && Meta.crystals >= Meta.cost(id))) UI.shine(this, W / 2, row(2), 460, MB_H, 3);   // есть на что потратить кристаллы
     const ver = this.add.text(W - 14, 1262, L('version') + (devMode() ? '  ·  DEV' : ''), { fontFamily: FONT, fontSize: '18px', color: devMode() ? '#ffe066' : '#b9b2cc' }).setOrigin(1, 0.5);
     let taps = 0, last = 0;                          // пять быстрых нажатий на версию переключают режим разработчика
@@ -266,23 +280,48 @@ class UpgradeScene extends Phaser.Scene {
   create() {
     this.input.on('pointerdown', () => Sfx.unlock());
     this.add.rectangle(W / 2, H / 2, W, H, 0x1b1530);
-    this.add.text(W / 2, 70, L('upgrades'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.text(W / 2, 138, `◆ ${Meta.crystals}`, { fontFamily: FONT, fontSize: '44px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5);
-    this.add.text(W / 2, 190, L('upHint'), { fontFamily: FONT, fontSize: '19px', color: '#b9b2cc', align: 'center' }).setOrigin(0.5);
+    // Список улучшений листается пальцем между шапкой и кнопкой «Назад».
+    const TOP = 224, BOTTOM = 1182, ROW = 172, items = [];
+    const put = o => { o.setData('y0', o.y); items.push(o); return o; };
     UP_ORDER.forEach((id, i) => {
-      const u = UPGRADES[id], y = 270 + i * 132, lvl = Meta.level(id), max = Meta.maxed(id), ok = !max && Meta.crystals >= Meta.cost(id);
-      UI.card(this, W / 2, y, 690, 124, u.color);
-      this.add.text(34, y - 54, UP_ICON[id] + ' ' + L('up_' + id), { fontFamily: FONT, fontSize: '25px', color: '#ffe066', fontStyle: 'bold' }).setDepth(3);
+      const u = UPGRADES[id], y = TOP + 86 + i * ROW, lvl = Meta.level(id), max = Meta.maxed(id), ok = !max && Meta.crystals >= Meta.cost(id);
+      put(UI.card(this, W / 2, y, 690, 160, u.color));
+      put(this.add.text(34, y - 62, UP_ICON[id] + ' ' + L('up_' + id), { fontFamily: FONT, fontSize: '27px', color: '#ffe066', fontStyle: 'bold' }).setDepth(3));
       // сейчас и (зелёным) — что даст следующий уровень
-      this.add.text(34, y - 18, upgradeText(id, lvl), { fontFamily: FONT, fontSize: '19px', color: '#e8e4f2' }).setDepth(3);
-      if (!max) this.add.text(34, y + 6, '→ ' + upgradeText(id, lvl + 1), { fontFamily: FONT, fontSize: '17px', color: '#7CFC8A' }).setDepth(3);
-      for (let k = 0; k < UP_COST.length; k++) this.add.rectangle(46 + k * 44, y + 44, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3);
-      if (max) this.add.text(566, y + 2, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3);
-      else { UI.button(this, 566, y + 2, 196, 64, `◆ ${Meta.cost(id)}`, 0x2c7f96, () => { if (Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } }, { depth: 3, size: '30px', enabled: ok, silent: true });
-        if (ok) UI.shine(this, 566, y + 2, 196, 64, 4); }
+      put(this.add.text(34, y - 20, upgradeText(id, lvl), { fontFamily: FONT, fontSize: '20px', color: '#e8e4f2' }).setDepth(3));
+      if (!max) put(this.add.text(34, y + 10, '→ ' + upgradeText(id, lvl + 1), { fontFamily: FONT, fontSize: '18px', color: '#7CFC8A' }).setDepth(3));
+      for (let k = 0; k < UP_COST.length; k++) put(this.add.rectangle(46 + k * 44, y + 52, 36, 14, k < lvl ? u.color : 0x3a3352).setStrokeStyle(2, 0x000000).setDepth(3));
+      if (max) put(this.add.text(566, y + 4, L('upMax'), { fontFamily: FONT, fontSize: '26px', color: '#7CFC8A', fontStyle: 'bold' }).setOrigin(0.5).setDepth(3));
+      else {
+        const [img, txt] = UI.button(this, 566, y + 4, 196, 76, `◆ ${Meta.cost(id)}`, 0x2c7f96, null, { depth: 3, size: '30px', enabled: ok, silent: true });
+        put(img); put(txt);
+        // покупка по отпусканию пальца, и только если список не листали
+        if (ok) img.on('pointerup', p => { if (!this.dragged && p.y > TOP && p.y < BOTTOM && Meta.buy(id)) { Sfx.play('evolve'); this.scene.restart(); } });
+        if (ok) UI.shine(this, 566, y + 4, 196, 76, 4).objs.forEach(put);
+      }
     });
+    // Прокрутка: тянем пальцем; положение запоминается, чтобы после покупки список не прыгал наверх.
+    const maxScroll = Math.max(0, TOP + 86 + (UP_ORDER.length - 1) * ROW + 90 - BOTTOM);
+    const bar = this.add.rectangle(W - 8, 0, 6, 0, 0xffffff, 0.35).setOrigin(0.5, 0).setDepth(11);
+    const apply = v => {
+      UpgradeScene.scroll = Phaser.Math.Clamp(v, 0, maxScroll);
+      items.forEach(o => { o.y = o.getData('y0') - UpgradeScene.scroll; });
+      const vis = BOTTOM - TOP, h = vis * vis / (vis + maxScroll);
+      bar.setVisible(maxScroll > 0).setSize(6, h); bar.y = TOP + (vis - h) * (maxScroll ? UpgradeScene.scroll / maxScroll : 0);
+    };
+    apply(UpgradeScene.scroll || 0);
+    let downY = 0, start = 0;
+    this.input.on('pointerdown', p => { downY = p.y; start = UpgradeScene.scroll; this.dragged = false; });
+    this.input.on('pointermove', p => { if (!p.isDown) return; if (Math.abs(p.y - downY) > 10) this.dragged = true; if (this.dragged) apply(start - (p.y - downY)); });
+    this.input.on('wheel', (p, objs, dx, dy) => apply(UpgradeScene.scroll + dy * 0.6));
+    // Шапка и низ поверх списка: закрывают уехавшие карточки и не пропускают нажатия к ним.
+    this.add.rectangle(W / 2, TOP / 2, W, TOP, 0x1b1530).setDepth(10).setInteractive();
+    this.add.rectangle(W / 2, (BOTTOM + H) / 2, W, H - BOTTOM, 0x1b1530).setDepth(10).setInteractive();
+    this.add.text(W / 2, 64, L('upgrades'), { fontFamily: FONT, fontSize: '52px', color: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(11);
+    this.add.text(W / 2, 132, `◆ ${Meta.crystals}`, { fontFamily: FONT, fontSize: '44px', color: '#7fe9ff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(11);
+    this.add.text(W / 2, 186, L('upHint'), { fontFamily: FONT, fontSize: '19px', color: '#b9b2cc', align: 'center' }).setOrigin(0.5).setDepth(11);
     // Кристаллы за просмотр ролика — только там, где площадка умеет показывать рекламу за награду.
-    if (Platform.ads.rewarded) uiButton(this, W / 2, 1150, 460, 64, L('adCrystals', REWARD.ad), 0x8a5a2e, () => Platform.ads.showRewarded().then(ok => { if (ok) { Meta.add(REWARD.ad); Sfx.play('evolve'); } this.scene.restart(); }), 1, '26px');
-    uiButton(this, W / 2, 1230, 360, 66, L('back'), 0x5a4f7a, () => this.scene.start('menu'), 1, '30px');
+    if (Platform.ads.rewarded) uiButton(this, W / 2 - 130, 1232, 230, 64, L('adCrystals', REWARD.ad), 0x8a5a2e, () => Platform.ads.showRewarded().then(ok => { if (ok) { Meta.add(REWARD.ad); Sfx.play('evolve'); } this.scene.restart(); }), 11, '20px');
+    uiButton(this, Platform.ads.rewarded ? W / 2 + 160 : W / 2, 1232, Platform.ads.rewarded ? 260 : 360, 66, L('back'), 0x5a4f7a, () => { UpgradeScene.scroll = 0; this.scene.start('menu'); }, 11, '30px');
   }
 }
